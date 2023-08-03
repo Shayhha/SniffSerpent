@@ -62,7 +62,8 @@ class Default_Packet(ABC): #abstarct class for default packet
         if IP in self.packet: 
             srcIp = self.packet[IP].src
             dstIp = self.packet[IP].dst
-            output += f'Source IP: {srcIp}, Destination IP: {dstIp}\n'
+            output += f'Source IP: {srcIp}\n'
+            output += f'Destination IP: {dstIp}\n'
             # additional Information for IPv4 and IPv6 packets
             if self.packet[IP].version == 4:
                 ttl = self.packet[IP].ttl
@@ -116,9 +117,12 @@ class Default_Packet(ABC): #abstarct class for default packet
         output = ''
         # print the packet information
         if (self.packetType == TCP or self.packetType == UDP) and self.packet.haslayer(IP):
-            output += f'{self.name} Packet - Source Port: {self.packet.sport}, Destination Port: {self.packet.dport}\n'
+            output += f'{self.name} Packet:\n' 
+            output += f'Source Port: {self.packet.sport}\n'
+            output += f'Destination Port: {self.packet.dport}\n'
         else:
-            output += f'{self.name} Packet - Source MAC: {self.packet.src}, Destination MAC: {self.packet.dst}\n'
+            output += f'{self.name} Packet - Source MAC: {self.packet.src}\n'
+            output += f'Destination MAC: {self.packet.dst}\n'
 
         dnsInfo = self.dnsInfo() #call dns method
         if dnsInfo != '':
@@ -162,7 +166,6 @@ class TCP_Packet(Default_Packet):
         output += f'Sequence Number: {self.packet.seq}, Acknowledgment Number: {self.packet.ack}\n'
         output += f'Flags: {flagsDict}\n'
         output += f'Window Size: {self.packet.window}\n'
-        output += '\n----------------------------------------------------------\n'
         return output
 
 #--------------------------------------------TCP-END----------------------------------------------#
@@ -178,11 +181,6 @@ class UDP_Packet(Default_Packet):
                 self.name = 'Raw UDP'
             self.packetType = UDP
 
-
-    def moreInfo(self): # method for packet information
-        output = f'{super().moreInfo()}'
-        output += '\n----------------------------------------------------------\n'
-        return output
 
 #--------------------------------------------UDP-END----------------------------------------------#
 
@@ -218,7 +216,6 @@ class ICMP_Packet(Default_Packet):
             output += f'{self.name} Packet - Type: {icmpType}, Code: {icmpCode}\n'
             
         output += self.ipInfo() #call ip method 
-        output += '\n----------------------------------------------------------\n'
         return output
 
 #--------------------------------------------ICMP-END----------------------------------------------#
@@ -254,7 +251,6 @@ class ARP_Packet(Default_Packet):
             output += f'Sender MAC: {srcMac}, Sender IP: {srcIp}\n'
             output += f'Target MAC: {dstMac}, Target IP: {dstIp}\n'
             output += f'Packet Size: {len(self.packet)} bytes\n'
-        output += '\n----------------------------------------------------------\n'
         return output
         
 # --------------------------------------------ARP-END----------------------------------------------#
@@ -286,7 +282,6 @@ class STP_Packet(Default_Packet):
             output += f'Bridge ID: {stpBridgeId}, Port ID: {stpPortId}\n'
             output += f'Path Cost: {stpPathCost}, Age: {stpAge}\n'
         output += f'Packet Size: {len(self.packet)} bytes\n'
-        output += '\n----------------------------------------------------------\n'
         return output
 
     # --------------------------------------------STP-END----------------------------------------------#
@@ -304,7 +299,6 @@ class Ether_Packet(Default_Packet):
         if Dot1Q in self.packet: # check for VLAN tags
             vlan_id = self.packet[Dot1Q].vlan
             output += f'VLAN ID: {vlan_id}\n'
-        output += '\n----------------------------------------------------------\n'
         return output
 
 # --------------------------------------------Ether-END----------------------------------------------#
@@ -338,8 +332,9 @@ def handleTCP(packet):
     TCP_Object = TCP_Packet(packet, packetCounter)
     packetDicitionary[TCP_Object.getId()] = TCP_Object
     packetCounter += 1
-    print(TCP_Object.info())
-    print(f'id: {packetCounter}')
+    #print(TCP_Object.info())
+    #print(f'id: {packetCounter}')
+    return TCP_Object
 
 
 def handleUDP(packet):
@@ -347,8 +342,9 @@ def handleUDP(packet):
     UDP_Object = UDP_Packet(packet, packetCounter)
     packetDicitionary[UDP_Object.getId()] = UDP_Object
     packetCounter += 1
-    print(UDP_Object.info())
-    print(f'id: {packetCounter}')
+    #print(UDP_Object.info())
+    #print(f'id: {packetCounter}')
+    return UDP_Object
 
 
 def handleICMP(packet):
@@ -356,8 +352,9 @@ def handleICMP(packet):
     ICMP_Object = ICMP_Packet(packet, packetCounter)
     packetDicitionary[ICMP_Object.getId()] = ICMP_Object
     packetCounter += 1
-    print(ICMP_Object.info())
-    print(f'id: {packetCounter}')
+    #print(ICMP_Object.info())
+    #print(f'id: {packetCounter}')
+    return ICMP_Object
 
 
 def handleARP(packet):
@@ -365,8 +362,9 @@ def handleARP(packet):
     ARP_Object = ARP_Packet(packet, packetCounter)
     packetDicitionary[ARP_Object.getId()] = ARP_Object
     packetCounter += 1
-    print(ARP_Object.info())
-    print(f'id: {packetCounter}')
+    #print(ARP_Object.info())
+    #print(f'id: {packetCounter}')
+    return ARP_Object
 
 
 def handleSTP(packet):
@@ -374,22 +372,23 @@ def handleSTP(packet):
     STP_Object = STP_Packet(packet, packetCounter)
     packetDicitionary[STP_Object.getId()] = STP_Object
     packetCounter += 1
-    print(STP_Object.info())
-    print(f'id: {packetCounter}')
-
+    #print(STP_Object.info())
+    #print(f'id: {packetCounter}')
+    return STP_Object
 
 def handleEther(packet):
     global packetCounter
     Ether_Object = Ether_Packet(packet, packetCounter)
     packetDicitionary[Ether_Object.getId()] = Ether_Object
     packetCounter += 1
-    print(Ether_Object.info())
-    print(f'id: {packetCounter}')
+    #print(Ether_Object.info())
+    #print(f'id: {packetCounter}')
+    return Ether_Object
 
 #-----------------------------------------HANDLE-FUNCTIONS-END-----------------------------------------#
 
 packetDicitionary = {} #initialize the packet dictionary
-packetCounter = 1 # global counter for dictionary elements
+packetCounter = 0 # global counter for dictionary elements
 stopCapture = False # for ctrl + c operation (stopping capture)
 
 def signalHandler(signal, frame): # handle method for stopping the program
@@ -463,8 +462,7 @@ class PacketCaptureThread(QThread):
         #for each packet we receive we send it to the dict to determine its identity and call the necessary handle method
         for packetType, handler in CaptureDicitionary.items():
             if packet.haslayer(packetType):
-                #handler(packet)
-                self.packetCaptured.emit(packet.summary())
+                self.packetCaptured.emit(handler(packet).info()) #call handler methods of each packet signaling it to the GUI 
                 break
         else:
             print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet
@@ -474,7 +472,7 @@ class PacketCaptureThread(QThread):
         if self.interface is not None:
             sniff(iface=self.interface, prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
         else:
-            sniff(prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
+            sniff(prn=self.PacketCapture, filter='udp', stop_filter=self.checkStopFlag, store=0)
 
     #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
     
@@ -496,6 +494,7 @@ class PacketSniffer(QMainWindow):
         self.setWindowTitle('Packet Sniffer')
         self.StartScanButton.clicked.connect(self.StartScanClicked)
         self.StopScanButton.clicked.connect(self.StopScanClicked)
+        self.PacketList.doubleClicked.connect(self.handleItemDoubleClicked)
         self.center()
         self.show()
 		
@@ -526,6 +525,14 @@ class PacketSniffer(QMainWindow):
 
     def updatePacketList(self, packetInfo):
         self.packetModel.appendRow(QStandardItem(packetInfo)) #add each packet info to the packet list in gui
+
+
+    def handleItemDoubleClicked(self, index):
+        packetIndex = index.row() #get the index of the row of the specific packet we want
+        item = self.PacketList.model().itemFromIndex(index)
+        if item is not None and packetIndex in packetDicitionary:
+            p = packetDicitionary[packetIndex]
+            self.MoreInfoLable.setText(p.moreInfo()) 
 
 #---------------------------------------------------Application-END----------------------------------------------------#
 
