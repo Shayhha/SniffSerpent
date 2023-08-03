@@ -26,16 +26,42 @@
    <string>Packet Sniffer</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background-color: rgb(222, 244, 255);</string>
+   <string notr="true">QWidget {
+	background-color: qlineargradient(spread:pad, x1:0.522364, y1:0.136, x2:0.522, y2:1, stop:0 rgba(113, 178, 236, 255), stop:1 rgba(210, 236, 246, 255));
+}
+
+QScrollBar:vertical {
+            border: 0px solid #999999;
+            background:  rgba(247, 247, 247,150);
+            width:10px;    
+            margin: 0px 0px 0px 0px;
+        }
+        QScrollBar::handle:vertical {         
+       
+            min-height: 100px;
+          	border: 0px solid red;
+			border-radius: 4px;
+			background-color: black;
+        }
+        QScrollBar::add-line:vertical {       
+            height: 0px;
+            subcontrol-position: bottom;
+            subcontrol-origin: margin;
+        }
+        QScrollBar::sub-line:vertical {
+            height: 0 px;
+            subcontrol-position: top;
+            subcontrol-origin: margin;
+        }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QListView" name="PacketList">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>40</y>
+      <y>50</y>
       <width>1021</width>
-      <height>521</height>
+      <height>551</height>
      </rect>
     </property>
     <property name="font">
@@ -55,6 +81,9 @@ border-radius: 15px;
 border-color: black;	
 padding: 4px;</string>
     </property>
+    <property name="verticalScrollBarPolicy">
+     <enum>Qt::ScrollBarAlwaysOn</enum>
+    </property>
     <property name="autoScroll">
      <bool>true</bool>
     </property>
@@ -63,7 +92,7 @@ padding: 4px;</string>
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>570</y>
+      <y>610</y>
       <width>1021</width>
       <height>181</height>
      </rect>
@@ -559,11 +588,11 @@ QPushButton:hover {
      </property>
     </widget>
    </widget>
-   <widget class="QLabel" name="MoreInfoLable">
+   <widget class="QLabel" name="ExtendedInformationLable">
     <property name="geometry">
      <rect>
       <x>1050</x>
-      <y>0</y>
+      <y>10</y>
       <width>300</width>
       <height>30</height>
      </rect>
@@ -592,13 +621,13 @@ QPushButton:hover {
      <string>Extended Information</string>
     </property>
    </widget>
-   <widget class="QLabel" name="MoreInfoLable_2">
+   <widget class="QLabel" name="MoreInfoLable">
     <property name="geometry">
      <rect>
       <x>1040</x>
-      <y>40</y>
+      <y>50</y>
       <width>521</width>
-      <height>711</height>
+      <height>741</height>
      </rect>
     </property>
     <property name="font">
@@ -623,7 +652,7 @@ padding: 4px;</string>
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>0</y>
+      <y>10</y>
       <width>200</width>
       <height>30</height>
      </rect>
@@ -656,17 +685,6 @@ padding: 4px;</string>
     </property>
    </widget>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1570</width>
-     <height>21</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <resources/>
  <connections/>

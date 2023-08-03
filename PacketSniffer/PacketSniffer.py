@@ -8,9 +8,11 @@ from scapy.layers.dns import DNSQR, DNSRR
 from scapy.all import Raw
 import netifaces
 from PyQt5.uic import loadUi
+from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5 import QtWidgets, Qt, QtGui
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGroupBox, QWidget, QCheckBox, QDesktopWidget, QVBoxLayout, QTableWidgetItem
+from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGroupBox, QWidget, QCheckBox, QDesktopWidget, QVBoxLayout, QMessageBox
+
 
 
 #--------------------------------------------Default_Packet----------------------------------------------#
@@ -397,60 +399,134 @@ def signalHandler(signal, frame): # handle method for stopping the program
 
 signal.signal(signal.SIGINT, signalHandler) # signal the stopping operation
 
-def PacketCapture(packet): # method that handles the packet capturing
-    #dicionary for packet kinds and their methods for handling:
-    CaptureDicitionary = {
-    TCP: handleTCP,
-    UDP: handleUDP,
-    ICMP: handleICMP,
-    ARP: handleARP,
-    STP: handleSTP,
-    Ether: handleEther
-    }
-    #for each packet we receive we send it to the dict to determine its identity and call the necessary handle method
-    for packetType, handler in CaptureDicitionary.items():
-        if packet.haslayer(packetType):
-            handler(packet)
-            break
-    else:
-        print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet')
-    if stopCapture:
-        print('Packet capturing stopped.')
-        sys.exit(0)  # exit the program 
+#def PacketCapture(packet): # method that handles the packet capturing
+#    #dicionary for packet kinds and their methods for handling:
+#    CaptureDicitionary = {
+#    TCP: handleTCP,
+#    UDP: handleUDP,
+#    ICMP: handleICMP,
+#    ARP: handleARP,
+#    STP: handleSTP,
+#    Ether: handleEther
+#    }
+#    #for each packet we receive we send it to the dict to determine its identity and call the necessary handle method
+#    for packetType, handler in CaptureDicitionary.items():
+#        if packet.haslayer(packetType):
+#            handler(packet)
+#            break
+#    else:
+#        print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet')
+#    if stopCapture:
+#        print('Packet capturing stopped.')
+#        sys.exit(0)  # exit the program 
 
 
 # method to initalize the sniffer
-def InitSniff(interface=None):
-    try:
-        if interface != None:
-            scapy.sniff(iface = interface, prn = PacketCapture, filter='', store=0) #calling scapy sniff method
-        else:
-            scapy.sniff(prn = PacketCapture, filter='tcp', store=0)
-    except KeyboardInterrupt:
-        print('\nKeyboard interrupted program (possible exception)')
+#def InitSniff(interface=None):
+#    try:
+#        if interface != None:
+#            scapy.sniff(iface = interface, prn = PacketCapture, filter='', store=0) #calling scapy sniff method
+#        else:
+#            scapy.sniff(prn = PacketCapture, filter='tcp', store=0)
+#    except KeyboardInterrupt:
+#        print('\nKeyboard interrupted program (possible exception)')
+#-----------------------------------------HELPER-FUNCTIONS-END-----------------------------------------#
 
-#--------------------------------------------Application----------------------------------------------#
+#--------------------------------------------PacketCaptureThread----------------------------------------------#
+
+class PacketCaptureThread(QThread):
+    packetCaptured = pyqtSignal(object)
+    interface = None
+    stopCapture = False
+
+    def __init__(self, interface=None):
+        super(PacketCaptureThread, self).__init__()
+        self.interface = interface
+
+    def stop(self):
+        self.stopCapture = True
+
+    def checkStopFlag(self, packet):
+        return self.stopCapture
+
+    
+    def PacketCapture(self, packet): # method that handles the packet capturing
+        #dicionary for packet kinds and their methods for handling:
+        CaptureDicitionary = {
+        TCP: handleTCP,
+        UDP: handleUDP,
+        ICMP: handleICMP,
+        ARP: handleARP,
+        STP: handleSTP,
+        Ether: handleEther
+        }
+        #for each packet we receive we send it to the dict to determine its identity and call the necessary handle method
+        for packetType, handler in CaptureDicitionary.items():
+            if packet.haslayer(packetType):
+                #handler(packet)
+                self.packetCaptured.emit(packet.summary())
+                break
+        else:
+            print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet
+
+
+    def run(self):
+        if self.interface is not None:
+            scapy.sniff(iface=self.interface, prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
+        else:
+            scapy.sniff(prn=self.PacketCapture, filter='', stop_filter=self.checkStopFlag, store=0)
+
+    #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
+    
+#---------------------------------------------------Application----------------------------------------------------#
 class PacketSniffer(QMainWindow):
+    packetCaptureThread = None
+    packetModel = None
+
     def __init__(self):
         super(PacketSniffer, self).__init__()
-        loadUi("PacketSniffer.ui",self)
+        loadUi("PacketSniffer.ui", self)
         self.initUI()
+        self.packetModel = QStandardItemModel()
+        self.PacketList.setModel(self.packetModel) #set the model for the packetlist in gui
+
 
     def initUI(self):
         self.setWindowTitle('Packet Sniffer')
+        self.StartScanButton.clicked.connect(self.StartScanClicked)
+        self.StopScanButton.clicked.connect(self.StopScanClicked)
         self.center()
         self.show()
 		
+
     def center(self):
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
     
- 
-        
 
-#--------------------------------------------Application-END----------------------------------------------#
+    def StartScanClicked(self):
+       if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning():
+            self.StopScanClicked()  # Stop previous capture thread if exists
+            self.packetCaptureThread = PacketCaptureThread()
+            self.packetCaptureThread.packetCaptured.connect(self.updatePacketList)
+            self.packetCaptureThread.start()
+            print("Start Scan button clicked")
+
+
+    def StopScanClicked(self):
+        if self.packetCaptureThread is not None and self.packetCaptureThread.isRunning():
+            self.packetCaptureThread.stop()
+            self.packetCaptureThread.exit()
+            self.packetCaptureThread = None
+            QMessageBox.information(self, "Scan Stopped", "Packet capturing stopped.")
+
+
+    def updatePacketList(self, packetInfo):
+        self.packetModel.appendRow(QStandardItem(packetInfo)) #add each packet info to the packet list in gui
+
+#---------------------------------------------------Application-END----------------------------------------------------#
 
 #--------------------------------------------MAIN----------------------------------------------#
 
@@ -463,6 +539,6 @@ if __name__ == '__main__':
     except:
         print("Exiting")
     #----------------APP----------------#
-    GetAvailableNetworkInterfaces()
-    InitSniff()
+    #GetAvailableNetworkInterfaces()
+    #InitSniff()
 
