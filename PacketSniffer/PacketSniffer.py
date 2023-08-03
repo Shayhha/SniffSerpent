@@ -474,11 +474,12 @@ class PacketCaptureThread(QThread):
         if self.interface is not None:
             scapy.sniff(iface=self.interface, prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
         else:
-            scapy.sniff(prn=self.PacketCapture, filter='', stop_filter=self.checkStopFlag, store=0)
+            scapy.sniff(prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
 
     #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
     
 #---------------------------------------------------Application----------------------------------------------------#
+
 class PacketSniffer(QMainWindow):
     packetCaptureThread = None
     packetModel = None
