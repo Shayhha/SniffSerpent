@@ -2,7 +2,7 @@ import sys
 import signal
 from abc import ABC, abstractmethod
 import scapy.all as scapy
-from scapy.all import IP, IPv6, TCP, UDP, ICMP, ARP
+from scapy.all import sniff, IP, IPv6, TCP, UDP, ICMP, ARP
 from scapy.layers.l2 import Ether, Dot1Q, STP
 from scapy.layers.dns import DNSQR, DNSRR
 from scapy.all import Raw
@@ -425,9 +425,9 @@ signal.signal(signal.SIGINT, signalHandler) # signal the stopping operation
 #def InitSniff(interface=None):
 #    try:
 #        if interface != None:
-#            scapy.sniff(iface = interface, prn = PacketCapture, filter='', store=0) #calling scapy sniff method
+#            sniff(iface = interface, prn = PacketCapture, filter='', store=0) #calling scapy sniff method
 #        else:
-#            scapy.sniff(prn = PacketCapture, filter='tcp', store=0)
+#            sniff(prn = PacketCapture, filter='tcp', store=0)
 #    except KeyboardInterrupt:
 #        print('\nKeyboard interrupted program (possible exception)')
 #-----------------------------------------HELPER-FUNCTIONS-END-----------------------------------------#
@@ -472,9 +472,9 @@ class PacketCaptureThread(QThread):
 
     def run(self):
         if self.interface is not None:
-            scapy.sniff(iface=self.interface, prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
+            sniff(iface=self.interface, prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
         else:
-            scapy.sniff(prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
+            sniff(prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
 
     #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
     
