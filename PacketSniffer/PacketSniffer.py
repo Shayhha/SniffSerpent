@@ -8,10 +8,11 @@ from scapy.layers.dns import DNSQR, DNSRR
 from scapy.all import Raw
 import netifaces
 from PyQt5.uic import loadUi
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QThread, QTimer
 from PyQt5 import QtWidgets, Qt, QtGui
 from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGroupBox, QWidget, QCheckBox, QDesktopWidget, QVBoxLayout, QMessageBox
+from queue import Queue
 
 
 
@@ -50,9 +51,15 @@ class Default_Packet(ABC): #abstarct class for default packet
         output = ''
         if DNSQR in self.packet:
             dnsQry = self.packet[DNSQR].qname.decode('utf-8')
+            if len(dnsQry) >= 50:
+                dnsQry = '\n'.join(dnsQry[i:i+50] for i in range(0, len(dnsQry), 50))
             output += f'DNS Query: {dnsQry}'
         elif DNSRR in self.packet:
             dnsAns = self.packet[DNSRR].rdata
+            if not isinstance(dnsAns, list) and isinstance(dnsAns, bytes):
+                dnsAns = dnsAns.decode('utf-8')
+                if len(dnsAns) >= 50:
+                    dnsAns = '\n'.join(dnsAns[i:i+50] for i in range(0, len(dnsAns), 50))
             output += f'DNS Answer: {dnsAns}'
         return output
 
@@ -62,23 +69,20 @@ class Default_Packet(ABC): #abstarct class for default packet
         if IP in self.packet: 
             srcIp = self.packet[IP].src
             dstIp = self.packet[IP].dst
-            output += f'Source IP: {srcIp}\n'
-            output += f'Destination IP: {dstIp}\n'
+            output += f'Source IP: {srcIp}\n\n'
+            output += f'Destination IP: {dstIp}\n\n'
             # additional Information for IPv4 and IPv6 packets
             if self.packet[IP].version == 4:
                 ttl = self.packet[IP].ttl
-                output += f'TTL: {ttl}\n'
                 dscp = self.packet[IP].tos
-                output += f'DSCP: {dscp}\n'
+                output += f'TTL: {ttl}, DSCP: {dscp}\n\n'
 
             elif self.packet[IP].version == 6:
                 hopLimit = self.packet[IPv6].hlim
-                output += f'Hop Limit: {hopLimit}\n'
                 trafficClass = self.packet[IPv6].tc
-                output += f'Traffic Class: {trafficClass}\n'
-
-            output += f'Checksum: {self.packet.chksum}\n'
-        output += f'Packet Size: {len(self.packet)} bytes\n'
+                output += f'Hop Limit: {hopLimit}, Traffic Class: {trafficClass}\n\n'
+            output += f'Checksum: {self.packet.chksum}\n\n'
+        output += f'Packet Size: {len(self.packet)} bytes\n\n'
         return output
 
 
@@ -117,16 +121,17 @@ class Default_Packet(ABC): #abstarct class for default packet
         output = ''
         # print the packet information
         if (self.packetType == TCP or self.packetType == UDP) and self.packet.haslayer(IP):
-            output += f'{self.name} Packet:\n' 
-            output += f'Source Port: {self.packet.sport}\n'
-            output += f'Destination Port: {self.packet.dport}\n'
+            output += f'{self.name} Packet:\n\n' 
+            output += f'Source Port: {self.packet.sport}\n\n'
+            output += f'Destination Port: {self.packet.dport}\n\n'
         else:
-            output += f'{self.name} Packet - Source MAC: {self.packet.src}\n'
-            output += f'Destination MAC: {self.packet.dst}\n'
+            output += f'{self.name} Packet:\n\n'
+            output += f'Source MAC: {self.packet.src}\n\n'
+            output += f'Destination MAC: {self.packet.dst}\n\n'
 
         dnsInfo = self.dnsInfo() #call dns method
         if dnsInfo != '':
-            output += f'{dnsInfo}\n'
+            output += f'{dnsInfo}\n\n'
         output += self.ipInfo() #call ip method 
         return output
 
@@ -158,14 +163,20 @@ class TCP_Packet(Default_Packet):
             'URG': (flags & 0x20) != 0,
         }
 
+        output += f'Sequence Number: {self.packet.seq}\n\n'
+        output += f'Acknowledgment Number: {self.packet.ack}\n\n'
+        output += f'Window Size: {self.packet.window}\n\n'
+        output += 'Flags:\n'
+        temp = ''
+        for flag, value in flagsDict.items():
+            temp += f'{flag}: {value}, '
+        output += temp.rstrip(', ')
+        output += '\n'
         if self.packet[self.packetType].options: # print TCP Options (if available)
             output += 'TCP Options:\n'
             for option in self.packet[self.packetType].options:
-                output += f'{option[0]}: {option[1]}\n'
-        
-        output += f'Sequence Number: {self.packet.seq}, Acknowledgment Number: {self.packet.ack}\n'
-        output += f'Flags: {flagsDict}\n'
-        output += f'Window Size: {self.packet.window}\n'
+                output += f'{option[0]}: {option[1]} '
+            
         return output
 
 #--------------------------------------------TCP-END----------------------------------------------#
@@ -213,8 +224,13 @@ class ICMP_Packet(Default_Packet):
             # insert ICMP specific information
             icmpType = self.packet[ICMP].type
             icmpCode = self.packet[ICMP].code
-            output += f'{self.name} Packet - Type: {icmpType}, Code: {icmpCode}\n'
-            
+            icmpSeq = self.packet[ICMP].seq
+            icmpId = self.packet[ICMP].id
+            output += f'{self.name} Packet:\n\n'
+            output += f'Type: {icmpType}\n\n'
+            output += f'Code: {icmpCode}\n\n'
+            output += f'Sequence Number: {icmpSeq}\n\n'
+            output += f'Identifier: {icmpId}\n\n'
         output += self.ipInfo() #call ip method 
         return output
 
@@ -241,16 +257,19 @@ class ARP_Packet(Default_Packet):
 
     def moreInfo(self):  # method for ARP packet information
         output = ''
-        output += f'{self.name} Packet - Source MAC: {self.packet[self.packetType].hwsrc}, Destination MAC: {self.packet[self.packetType].hwdst}\n'
-        output += f'Source IP: {self.packet[self.packetType].psrc}, Destination IP: {self.packet[self.packetType].pdst}\n'
         if ARP in self.packet:
-            srcMac = self.packet[ARP].hwsrc
-            dstMac = self.packet[ARP].hwdst
-            srcIp = self.packet[ARP].psrc
-            dstIp = self.packet[ARP].pdst
-            output += f'Sender MAC: {srcMac}, Sender IP: {srcIp}\n'
-            output += f'Target MAC: {dstMac}, Target IP: {dstIp}\n'
-            output += f'Packet Size: {len(self.packet)} bytes\n'
+            output += f'{self.name} Packet:\n\n'
+            output += f'Source MAC: {self.packet[ARP].hwsrc}\n\n'
+            output += f'Destination MAC: {self.packet[ARP].hwdst}\n\n'
+            output += f'Source IP: {self.packet[ARP].psrc}\n\n'
+            output += f'Destination IP: {self.packet[ARP].pdst}\n\n'
+            output += f'Packet Size: {len(self.packet)} bytes\n\n'
+            output += f'ARP Operation: {"Request" if self.packet[ARP].op == 1 else "Reply"}\n\n'
+            output += f'ARP Hardware Type: {self.packet[ARP].hwtype}\n\n'
+            output += f'ARP Protocol Type: {hex(self.packet[ARP].ptype)}\n\n'
+            output += f'ARP Hardware Length: {self.packet[ARP].hwlen}\n\n'
+            output += f'ARP Protocol Length: {self.packet[ARP].plen}\n\n'
+            output += f'Packet Size: {len(self.packet)} bytes\n\n'
         return output
         
 # --------------------------------------------ARP-END----------------------------------------------#
@@ -277,11 +296,16 @@ class STP_Packet(Default_Packet):
             stpPortId = self.packet[STP].portid
             stpPathCost = self.packet[STP].pathcost
             stpAge = self.packet[STP].age
-            output += f'{self.name} Packet - STP Protocol: {stpProto}, Version: {stpVersion}\n'
-            output += f'Source MAC: {self.packet.src}, Destination MAC: {self.packet.dst}\n'
-            output += f'Bridge ID: {stpBridgeId}, Port ID: {stpPortId}\n'
-            output += f'Path Cost: {stpPathCost}, Age: {stpAge}\n'
-        output += f'Packet Size: {len(self.packet)} bytes\n'
+            output += f'{self.name} Packet:\n\n'
+            output += f'STP Protocol: {stpProto}\n\n'
+            output += f'Version: {stpVersion}\n\n'
+            output += f'Source MAC: {self.packet.src}\n\n'
+            output += f'Destination MAC: {self.packet.dst}\n\n'
+            output += f'Bridge ID: {stpBridgeId}\n\n'
+            output += f'Port ID: {stpPortId}\n\n'
+            output += f'Path Cost: {stpPathCost}\n\n'
+            output += f'Age: {stpAge}\n\n'
+        output += f'Packet Size: {len(self.packet)} bytes\n\n'
         return output
 
     # --------------------------------------------STP-END----------------------------------------------#
@@ -298,7 +322,7 @@ class Ether_Packet(Default_Packet):
         output = f'{super().moreInfo()}' #call super class method 
         if Dot1Q in self.packet: # check for VLAN tags
             vlan_id = self.packet[Dot1Q].vlan
-            output += f'VLAN ID: {vlan_id}\n'
+            output += f'VLAN ID: {vlan_id}\n\n'
         return output
 
 # --------------------------------------------Ether-END----------------------------------------------#
@@ -441,6 +465,7 @@ class PacketCaptureThread(QThread):
     def __init__(self, interface=None):
         super(PacketCaptureThread, self).__init__()
         self.interface = interface
+        self.packetQueue = Queue()  # Create a queue to store the captured packets
 
     def stop(self):
         self.stopCapture = True
@@ -462,7 +487,8 @@ class PacketCaptureThread(QThread):
         #for each packet we receive we send it to the dict to determine its identity and call the necessary handle method
         for packetType, handler in CaptureDicitionary.items():
             if packet.haslayer(packetType):
-                self.packetCaptured.emit(handler(packet).info()) #call handler methods of each packet signaling it to the GUI 
+                #self.packetCaptured.emit(handler(packet).info()) #call handler methods of each packet signaling it to the GUI 
+                self.packetQueue.put(handler(packet).info())
                 break
         else:
             print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet
@@ -472,7 +498,7 @@ class PacketCaptureThread(QThread):
         if self.interface is not None:
             sniff(iface=self.interface, prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
         else:
-            sniff(prn=self.PacketCapture, filter='udp', stop_filter=self.checkStopFlag, store=0)
+            sniff(prn=self.PacketCapture, filter='', stop_filter=self.checkStopFlag, store=0)
 
     #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
     
@@ -510,6 +536,13 @@ class PacketSniffer(QMainWindow):
        if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning():
             self.StopScanClicked()  # Stop previous capture thread if exists
             self.packetCaptureThread = PacketCaptureThread()
+            self.packetCaptureThread.packetCaptured.connect(self.addPacketToQueue)
+
+            # Start a QTimer to periodically check the packet queue and update the GUI
+            self.updateTimer = QTimer(self)
+            self.updateTimer.timeout.connect(self.updatePacketList)
+            self.updateTimer.start(2000)
+
             self.packetCaptureThread.packetCaptured.connect(self.updatePacketList)
             self.packetCaptureThread.start()
             print("Start Scan button clicked")
@@ -523,8 +556,15 @@ class PacketSniffer(QMainWindow):
             QMessageBox.information(self, "Scan Stopped", "Packet capturing stopped.")
 
 
-    def updatePacketList(self, packetInfo):
-        self.packetModel.appendRow(QStandardItem(packetInfo)) #add each packet info to the packet list in gui
+    def addPacketToQueue(self, packetInfo):
+        self.packetCaptureThread.packetQueue.put(packetInfo)
+        
+
+    def updatePacketList(self):
+        # Update the GUI by reading from the packet queue
+        while self.packetCaptureThread != None and not self.packetCaptureThread.packetQueue.empty():
+            packetInfo = self.packetCaptureThread.packetQueue.get()
+            self.packetModel.appendRow(QStandardItem(packetInfo))
 
 
     def handleItemDoubleClicked(self, index):
