@@ -462,22 +462,28 @@ signal.signal(signal.SIGINT, signalHandler) # signal the stopping operation
 
 class PacketCaptureThread(QThread):
     packetCaptured = pyqtSignal(object)
-    interface = None
-    stopCapture = False
+    interface = None #inerface of network (optional)
+    packetQueue = None #packet queue pointer for the thread
+    stopCapture = False #flag for capture status
 
-    def __init__(self, interface=None):
+    def __init__(self, packetQueue, interface=None):
         super(PacketCaptureThread, self).__init__()
-        self.interface = interface
-        self.packetQueue = Queue()  # Create a queue to store the captured packets
+        self.interface = interface #initialize the network interface if given
+        self.packetQueue = packetQueue #setting the packetQueue from the packet sniffer class
 
+
+    #methdo that handles stopping the scan
     def stop(self):
         self.stopCapture = True
 
-    def checkStopFlag(self, packet):
-        return self.stopCapture
 
-    
-    def PacketCapture(self, packet): # method that handles the packet capturing
+    #method for sniff method of scapy to know status of flag 
+    def checkStopFlag(self, packet):
+        return self.stopCapture 
+
+
+    #method that handles the packet capturing
+    def PacketCapture(self, packet): 
         #dicionary for packet kinds and their methods for handling:
         CaptureDicitionary = {
         TCP: handleTCP,
@@ -489,14 +495,14 @@ class PacketCaptureThread(QThread):
         }
         #for each packet we receive we send it to the dict to determine its identity and call the necessary handle method
         for packetType, handler in CaptureDicitionary.items():
-            if packet.haslayer(packetType):
-                #self.packetCaptured.emit(handler(packet).info()) #call handler methods of each packet signaling it to the GUI 
-                self.packetQueue.put(handler(packet).info())
+            if packet.haslayer(packetType): #if we found matching packet we call its handle method
+                self.packetQueue.put(handler(packet).info()) #call handler methods of each packet signaling it to the GUI
                 break
         else:
             print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet
 
 
+    #run method for the thread, initialzie the scan, call scapy sniff method with necessary parameters
     def run(self):
         if self.interface is not None:
             sniff(iface=self.interface, prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
@@ -508,26 +514,29 @@ class PacketCaptureThread(QThread):
 #---------------------------------------------------Application----------------------------------------------------#
 
 class PacketSniffer(QMainWindow):
-    packetCaptureThread = None
-    packetModel = None
+    packetCaptureThread = None #current thread that capturing packets 
+    packetModel = None #packet list model for QListView 
+    packetQueue = None #queue for packets before adding them to list (thread safe)
 
     def __init__(self):
         super(PacketSniffer, self).__init__()
-        loadUi("PacketSniffer.ui", self)
-        self.initUI()
-        self.packetModel = QStandardItemModel()
+        loadUi("PacketSniffer.ui", self) #load the ui file of the sniffer
+        self.initUI() #call init method
+        self.packetModel = QStandardItemModel() #set the QListView model for adding items to it
         self.PacketList.setModel(self.packetModel) #set the model for the packetlist in gui
+        self.packetQueue = Queue() #initialize the packet queue
 
 
     def initUI(self):
-        self.setWindowTitle('Packet Sniffer')
-        self.StartScanButton.clicked.connect(self.StartScanClicked)
-        self.StopScanButton.clicked.connect(self.StopScanClicked)
-        self.PacketList.doubleClicked.connect(self.handleItemDoubleClicked)
-        self.center()
-        self.show()
+        self.setWindowTitle('Packet Sniffer') #set title of window
+        self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
+        self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
+        self.PacketList.doubleClicked.connect(self.handleItemDoubleClicked) #add method to handle clicks on the items in packet list
+        self.center() #make the app open in center of screen
+        self.show() #show the application
 		
 
+    #method for making the app open in the center of screen
     def center(self):
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
@@ -535,47 +544,49 @@ class PacketSniffer(QMainWindow):
         self.move(qr.topLeft())
     
 
+    #method to handle the start scan button, initializing the packet sniffing
     def StartScanClicked(self):
-       if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning():
-            self.StopScanClicked()  # Stop previous capture thread if exists
-            self.packetCaptureThread = PacketCaptureThread()
-            self.packetCaptureThread.packetCaptured.connect(self.addPacketToQueue)
-
-            # Start a QTimer to periodically check the packet queue and update the GUI
-            self.updateTimer = QTimer(self)
-            self.updateTimer.timeout.connect(self.updatePacketList)
-            self.updateTimer.start(2000)
-
-            self.packetCaptureThread.packetCaptured.connect(self.updatePacketList)
-            self.packetCaptureThread.start()
+       if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning(): #checks if no thread is set for sniffer 
+            self.StopScanClicked()  #stop previous capture thread if exists
+            self.packetCaptureThread = PacketCaptureThread(self.packetQueue) #initialzie the packet thread with the queue we initialized
+            self.packetCaptureThread.packetCaptured.connect(self.addPacketToQueue) #connect the packet thread to addPacketToQueue method
+            self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
+            #start a QTimer to periodically check the packet queue and update the GUI
+            self.updateTimer = QTimer(self) #initialzie the QTimer
+            self.updateTimer.timeout.connect(self.updatePacketList) #connect a method that runs when time elapses
+            self.updateTimer.start(2000) #setting the timer to elapse every 2 seconds (can adjust according to the load)
+            self.packetCaptureThread.start() #calling the run method of the thread to start the scan
             print("Start Scan button clicked")
 
 
+    #method to handle the stop scan button, stops the packet sniffing
     def StopScanClicked(self):
-        if self.packetCaptureThread is not None and self.packetCaptureThread.isRunning():
-            self.packetCaptureThread.stop()
-            self.packetCaptureThread.exit()
-            self.packetCaptureThread = None
-            QMessageBox.information(self, "Scan Stopped", "Packet capturing stopped.")
+        if self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #checks if there is a running thread
+            self.packetCaptureThread.stop() #calls stop method of the thread 
+            self.packetCaptureThread.exit() #kills the thread 
+            self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan 
+            QMessageBox.information(self, "Scan Stopped", "Packet capturing stopped.") #message box for stop scan
 
 
+    #method to handle adding packets to queue
     def addPacketToQueue(self, packetInfo):
-        self.packetCaptureThread.packetQueue.put(packetInfo)
+        self.packetQueue.put(packetInfo) #add packet to queue
+       
         
-
+    #method for updating the packet list
     def updatePacketList(self):
-        # Update the GUI by reading from the packet queue
-        while self.packetCaptureThread != None and not self.packetCaptureThread.packetQueue.empty():
-            packetInfo = self.packetCaptureThread.packetQueue.get()
-            self.packetModel.appendRow(QStandardItem(packetInfo))
+        while self.packetCaptureThread != None and not self.packetQueue.empty(): #check if there's a thread running and if the queue no empty
+            packetInfo = self.packetQueue.get() #taking a packet from the queue
+            self.packetModel.appendRow(QStandardItem(packetInfo)) #adding to packet list in GUI
 
 
+    #method the double clicks in packet list, extended information section
     def handleItemDoubleClicked(self, index):
         packetIndex = index.row() #get the index of the row of the specific packet we want
-        item = self.PacketList.model().itemFromIndex(index)
-        if item is not None and packetIndex in packetDicitionary:
-            p = packetDicitionary[packetIndex]
-            self.MoreInfoLable.setText(p.moreInfo()) 
+        item = self.PacketList.model().itemFromIndex(index) #taking the packet from the list in GUI
+        if item is not None and packetIndex in packetDicitionary: #checking if the packet in GUI list isn't None 
+            p = packetDicitionary[packetIndex] #taking the matching packet from the packetDictionary
+            self.MoreInfoLable.setText(p.moreInfo()) #add the information to the extended information section in GUI
 
 #---------------------------------------------------Application-END----------------------------------------------------#
 
