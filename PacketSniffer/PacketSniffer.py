@@ -171,11 +171,14 @@ class TCP_Packet(Default_Packet):
         for flag, value in flagsDict.items():
             temp += f'{flag}: {value}, '
         output += temp.rstrip(', ')
-        output += '\n'
+        output += '\n\n'
         if self.packet[self.packetType].options: # print TCP Options (if available)
+            temp = ''
             output += 'TCP Options:\n'
             for option in self.packet[self.packetType].options:
-                output += f'{option[0]}: {option[1]} '
+                temp += f'{option[0]}: {option[1]}, '
+            output += temp.rstrip(', ')
+            output += '\n\n'
             
         return output
 
