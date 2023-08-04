@@ -466,11 +466,11 @@ class PacketCaptureThread(QThread):
     packetQueue = None #packet queue pointer for the thread
     stopCapture = False #flag for capture status
 
-    def __init__(self, packetQueue, interface=None):
+    def __init__(self, packetQueue, packetFilter, interface=None):
         super(PacketCaptureThread, self).__init__()
         self.interface = interface #initialize the network interface if given
         self.packetQueue = packetQueue #setting the packetQueue from the packet sniffer class
-
+        self.packetFilter = packetFilter
 
     #methdo that handles stopping the scan
     def stop(self):
@@ -484,22 +484,13 @@ class PacketCaptureThread(QThread):
 
     #method that handles the packet capturing
     def PacketCapture(self, packet): 
-        #dicionary for packet kinds and their methods for handling:
-        CaptureDicitionary = {
-        TCP: handleTCP,
-        UDP: handleUDP,
-        ICMP: handleICMP,
-        ARP: handleARP,
-        STP: handleSTP,
-        Ether: handleEther
-        }
         #for each packet we receive we send it to the dict to determine its identity and call the necessary handle method
-        for packetType, handler in CaptureDicitionary.items():
+        for packetType, handler in self.packetFilter.items():
             if packet.haslayer(packetType): #if we found matching packet we call its handle method
                 self.packetQueue.put(handler(packet).info()) #call handler methods of each packet signaling it to the GUI
                 break
-        else:
-            print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet
+        #else:
+        #    print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet
 
 
     #run method for the thread, initialzie the scan, call scapy sniff method with necessary parameters
@@ -546,9 +537,10 @@ class PacketSniffer(QMainWindow):
 
     #method to handle the start scan button, initializing the packet sniffing
     def StartScanClicked(self):
-       if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning(): #checks if no thread is set for sniffer 
+        if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning(): #checks if no thread is set for sniffer 
+            packetFilter = self.packetFilter() #call packet filter for filtered dictionary based on check boxes state
             self.StopScanClicked()  #stop previous capture thread if exists
-            self.packetCaptureThread = PacketCaptureThread(self.packetQueue) #initialzie the packet thread with the queue we initialized
+            self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter) #initialzie the packet thread with the queue we initialized
             self.packetCaptureThread.packetCaptured.connect(self.addPacketToQueue) #connect the packet thread to addPacketToQueue method
             self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
             #start a QTimer to periodically check the packet queue and update the GUI
@@ -571,7 +563,42 @@ class PacketSniffer(QMainWindow):
     #method to handle adding packets to queue
     def addPacketToQueue(self, packetInfo):
         self.packetQueue.put(packetInfo) #add packet to queue
-       
+    
+
+    #method that checks all the check boxs state, return a string with filtered packets
+    def packetFilter(self):
+        #check each check box to filter the packet kinds
+        packetFilter = ''
+        if not self.TCPCheckBox.isChecked():
+            packetFilter += 'TCP,'
+        if not self.UDPCheckBox.isChecked():
+            packetFilter += 'UDP,'
+        if not self.ICMPCheckBox.isChecked():
+            packetFilter += 'ICMP,'
+        if not self.ARPCheckBox.isChecked():
+            packetFilter += 'ARP,'
+        if not self.STPCheckBox.isChecked():
+            packetFilter += 'STP,'
+        if not self.EtherCheckBox.isChecked():
+            packetFilter += 'Ether,'
+        #dicionary for packet kinds and their methods for handling:
+        captureDictionary = {
+        TCP: handleTCP,
+        UDP: handleUDP,
+        ICMP: handleICMP,
+        ARP: handleARP,
+        STP: handleSTP,
+        Ether: handleEther
+        }
+        if packetFilter != '': #if packetFilter isn't empty it means we need to filter the dictionary 
+            packetFilter.rstrip(',').split(',')
+            temp = captureDictionary.copy()
+            for packetType, handler in temp.items():
+                p = str(packetType).split('.')[3].rstrip("'>")
+                if p in packetFilter:
+                    del captureDictionary[packetType]
+        return captureDictionary
+        
         
     #method for updating the packet list
     def updatePacketList(self):
