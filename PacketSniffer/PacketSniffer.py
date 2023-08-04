@@ -97,14 +97,14 @@ class Default_Packet(ABC): #abstarct class for default packet
         if self.packet.haslayer(IP):
             srcIp = self.packet[IP].src
             dstIp = self.packet[IP].dst
-            if (self.packetType == TCP or self.packetType == UDP) and (TCP in self.packet or UDP in self.packet):
-                srcPort = self.packet[self.packetType].sport
-                dstPort = self.packet[self.packetType].dport
+        if (self.packetType == TCP or self.packetType == UDP) and (TCP in self.packet or UDP in self.packet):
+            srcPort = self.packet[self.packetType].sport
+            dstPort = self.packet[self.packetType].dport
 
         if (self.packetType == TCP or self.packetType == UDP) and self.packet.haslayer(IP):
             output += f'{self.name} Packet: {srcIp}:{srcPort} --> {dstIp}:{dstPort}'
         elif (self.packetType == TCP or self.packetType == UDP) and not self.packet.haslayer(IP):
-            output += f'{self.name} Packet: {srcMac} --> {dstMac}'
+            output += f'{self.name} Packet: {srcMac}:{srcPort} --> {dstMac}:{dstPort}'
         elif self.packetType == Ether and self.packet.haslayer(IP):
             output += f'{self.name} Packet: {srcMac}:({srcIp}) --> {dstMac}:({dstIp})'
         elif self.packetType == Ether and not self.packet.haslayer(IP):
@@ -120,7 +120,7 @@ class Default_Packet(ABC): #abstarct class for default packet
     def moreInfo(self): # method to print more information for derived classes to implement
         output = ''
         # print the packet information
-        if (self.packetType == TCP or self.packetType == UDP) and self.packet.haslayer(IP):
+        if (self.packetType == TCP or self.packetType == UDP):
             output += f'{self.name} Packet:\n\n' 
             output += f'Source Port: {self.packet.sport}\n\n'
             output += f'Destination Port: {self.packet.dport}\n\n'
