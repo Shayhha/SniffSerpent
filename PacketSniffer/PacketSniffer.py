@@ -50,15 +50,15 @@ class Default_Packet(ABC): #abstarct class for default packet
         if DNSQR in self.packet:
             dnsQry = self.packet[DNSQR].qname.decode('utf-8')
             if extended:
-                if len(dnsQry) >= 45:
-                    dnsQry = '\n'.join(dnsQry[i:i+45] for i in range(0, len(dnsQry), 45))
+                if len(dnsQry) >= 46:
+                    dnsQry = '\n'.join(dnsQry[i:i+46] for i in range(0, len(dnsQry), 46))
                     output += f'DNS Query:\n{dnsQry}'
-                elif len(f'DNS Query: {dnsQry}') >=45:
+                elif len(f'DNS Query: {dnsQry}') >=46:
                     output += f'DNS Query:\n{dnsQry}'
                 else:
                     output += f'DNS Query: {dnsQry}'
             else:
-                 if len(f'DNS Query: {dnsQry}') >=45:
+                 if len(f'DNS Query: {dnsQry}') >=46:
                     output += f'DNS Query:\n{dnsQry}'
                  else:
                     output += f'DNS Query: {dnsQry}'
@@ -66,10 +66,10 @@ class Default_Packet(ABC): #abstarct class for default packet
             dnsAns = self.packet[DNSRR].rdata
             if not isinstance(dnsAns, list) and isinstance(dnsAns, bytes):
                 dnsAns = dnsAns.decode('utf-8')
-                if len(dnsAns) >= 45:
-                    dnsAns = '\n'.join(dnsAns[i:i+45] for i in range(0, len(dnsAns), 45))
+                if len(dnsAns) >= 46:
+                    dnsAns = '\n'.join(dnsAns[i:i+46] for i in range(0, len(dnsAns), 46))
                     output += f'DNS Answer:\n{dnsAns}'
-                elif len(f'DNS Answer: {dnsAns}') >=45:
+                elif len(f'DNS Answer: {dnsAns}') >=46:
                     output += f'DNS Answer:\n{dnsAns}'
                 else:
                     output += f'DNS Answer: {dnsAns}'
