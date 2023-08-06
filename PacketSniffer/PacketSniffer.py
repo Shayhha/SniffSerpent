@@ -3,8 +3,8 @@ import signal
 from abc import ABC, abstractmethod
 import scapy.all as scapy
 from scapy.all import sniff, IP, IPv6, TCP, UDP, ICMP, ARP
-from scapy.layers.l2 import Ether, Dot1Q, STP
-from scapy.layers.dns import DNSQR, DNSRR
+from scapy.layers.l2 import STP
+from scapy.layers.dns import DNS
 from scapy.all import Raw
 import netifaces
 from PyQt5.uic import loadUi
@@ -45,34 +45,17 @@ class Default_Packet(ABC): #abstarct class for default packet
         return output
     
 
-    def dnsInfo(self, extended=True):
+    def fitStr(self, st, info): #method that handles a long string and makes it fit in the GUI 
         output = ''
-        if DNSQR in self.packet:
-            dnsQry = self.packet[DNSQR].qname.decode('utf-8')
-            if extended:
-                if len(dnsQry) >= 46:
-                    dnsQry = '\n'.join(dnsQry[i:i+46] for i in range(0, len(dnsQry), 46))
-                    output += f'DNS Query:\n{dnsQry}'
-                elif len(f'DNS Query: {dnsQry}') >=46:
-                    output += f'DNS Query:\n{dnsQry}'
-                else:
-                    output += f'DNS Query: {dnsQry}'
-            else:
-                 if len(f'DNS Query: {dnsQry}') >=46:
-                    output += f'DNS Query:\n{dnsQry}'
-                 else:
-                    output += f'DNS Query: {dnsQry}'
-        elif DNSRR in self.packet:
-            dnsAns = self.packet[DNSRR].rdata
-            if not isinstance(dnsAns, list) and isinstance(dnsAns, bytes):
-                dnsAns = dnsAns.decode('utf-8')
-                if len(dnsAns) >= 46:
-                    dnsAns = '\n'.join(dnsAns[i:i+46] for i in range(0, len(dnsAns), 46))
-                    output += f'DNS Answer:\n{dnsAns}'
-                elif len(f'DNS Answer: {dnsAns}') >=46:
-                    output += f'DNS Answer:\n{dnsAns}'
-                else:
-                    output += f'DNS Answer: {dnsAns}'
+        if isinstance(info, bytes):
+            info = info.decode('utf-8', errors='replace')
+        if len(info) >= 46:
+            temp = '\n'.join(info[i:i+46] for i in range(0, len(info), 46))
+            output += f'{st}\n{temp}\n\n'
+        elif len(f'DNS Query: {info}') >=46:
+            output += f'{st}\n{info}\n\n'
+        else:
+            output += f'{st} {info}\n\n'
         return output
 
 
@@ -93,6 +76,7 @@ class Default_Packet(ABC): #abstarct class for default packet
                 hopLimit = self.packet[IPv6].hlim
                 trafficClass = self.packet[IPv6].tc
                 output += f'Hop Limit: {hopLimit}, Traffic Class: {trafficClass}\n\n'
+        if hasattr(self.packet, 'chksum'):
             output += f'Checksum: {self.packet.chksum}\n\n'
         output += f'Packet Size: {len(self.packet)} bytes\n\n'
         return output
@@ -109,22 +93,15 @@ class Default_Packet(ABC): #abstarct class for default packet
         if self.packet.haslayer(IP):
             srcIp = self.packet[IP].src
             dstIp = self.packet[IP].dst
-        if (self.packetType == TCP or self.packetType == UDP) and (TCP in self.packet or UDP in self.packet):
-            srcPort = self.packet[self.packetType].sport
-            dstPort = self.packet[self.packetType].dport
+        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP):
+            srcPort = self.packet.sport
+            dstPort = self.packet.dport
 
-        if (self.packetType == TCP or self.packetType == UDP) and self.packet.haslayer(IP):
+        if self.packet.haslayer(IP):
             output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})'
-        elif (self.packetType == TCP or self.packetType == UDP) and not self.packet.haslayer(IP):
+        elif not self.packet.haslayer(IP):
             output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})'
-        elif self.packetType == Ether and self.packet.haslayer(IP):
-            output += f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac})'
-        elif self.packetType == Ether and not self.packet.haslayer(IP):
-            output += f'{self.name} Packet: ({srcMac}) --> ({dstMac})'
 
-        dnsInfo = self.dnsInfo() #call dns method
-        if dnsInfo != '':
-            output += f' {dnsInfo}'
         output += f' | Size: {packetSize} bytes'
         return output
 
@@ -132,7 +109,7 @@ class Default_Packet(ABC): #abstarct class for default packet
     def moreInfo(self): # method to print more information for derived classes to implement
         output = ''
         # print the packet information
-        if (self.packetType == TCP or self.packetType == UDP):
+        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP):
             output += f'{self.name} Packet:\n\n' 
             output += f'Source Port: {self.packet.sport}\n\n'
             output += f'Destination Port: {self.packet.dport}\n\n'
@@ -141,9 +118,6 @@ class Default_Packet(ABC): #abstarct class for default packet
             output += f'Source MAC: {self.packet.src}\n\n'
             output += f'Destination MAC: {self.packet.dst}\n\n'
 
-        dnsInfo = self.dnsInfo() #call dns method
-        if dnsInfo != '':
-            output += f'{dnsInfo}\n\n'
         output += self.ipInfo() #call ip method 
         return output
 
@@ -234,7 +208,7 @@ class ICMP_Packet(Default_Packet):
             dstIp = self.packet[IP].dst
             output += f'{self.name} Packet: ({srcIp}) --> ({dstIp}) | Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes'
         else:
-            output += f'{self.name} Packet: --> {self.packet.summary()}, Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes'
+            output += f'{self.name} Packet: Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes'
         return output
 
 
@@ -330,26 +304,68 @@ class STP_Packet(Default_Packet):
 
 # --------------------------------------------STP-END----------------------------------------------#
 
-# --------------------------------------------Ether----------------------------------------------#
-class Ether_Packet(Default_Packet):
+# -----------------------------------------------DNS------------------------------------------------#
+class DNS_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
-        super().__init__('Ether', packet, id) # call parent ctor
-        if packet.haslayer(Ether): #checks if packet is ether
-            self.packetType = Ether
+        super().__init__('DNS', packet, id) # call parent ctor
+        if packet.haslayer(DNS): #checks if packet is ether
+            self.packetType = DNS
 
 
-    def moreInfo(self): # method for packet information
-        output = f'{super().moreInfo()}' #call super class method 
-        if Dot1Q in self.packet: # check for VLAN tags
-            vlan_id = self.packet[Dot1Q].vlan
-            output += f'VLAN ID: {vlan_id}\n\n'
+    def info(self):
+        output ='' # output string for information of packet
+        dnsPacket = self.packet[DNS]
+        srcMac = self.packet.src
+        dstMac = self.packet.dst
+        srcPort = ''
+        dstPort =''
+        packetSize = len(self.packet)
+
+        if self.packet.haslayer(IP):
+            srcIp = self.packet[IP].src
+            dstIp = self.packet[IP].dst
+        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP):
+            srcPort = self.packet.sport
+            dstPort = self.packet.dport
+
+        if (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and self.packet.haslayer(IP):
+            output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})'
+        elif (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and not self.packet.haslayer(IP):
+            output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})'
+        elif self.packet.haslayer(IP):
+            f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac})'
+        elif not self.packet.haslayer(IP):
+            f'{self.name} Packet: ({srcMac}) --> ({dstMac})'
+
+        output += f' Type: {"Response" if dnsPacket.qr else "Request"}'
+        output += f' | Size: {packetSize} bytes'
         return output
 
-# --------------------------------------------Ether-END----------------------------------------------#
 
-# -----------------------------------------------DNS------------------------------------------------#
-
-#TODO
+    def moreInfo(self):
+        output = super().moreInfo()
+        if self.packet and DNS in self.packet:
+            dnsPacket = self.packet[DNS]
+            #output += f'DNS Packet:\n\n'
+            output += f'ID: {dnsPacket.id}\n\n' #id of the dns packet
+            if dnsPacket.qr == 1: #means its a response packet
+                if dnsPacket.an: 
+                # Extract and display information from the answers section if present
+                    output += f'Type: Response\n\n' #specifing its type
+                    output += self.fitStr('Response Name:', dnsPacket.an.rrname)
+                    output += f'Response Type: {dnsPacket.an.type}, '
+                    output += f'Response Class: {dnsPacket.an.rclass}\n\n'
+                    output += f'Num Responses: {len(dnsPacket.an)}\n\n'
+                    if hasattr(dnsPacket.an, 'rdata'): #check if rdata attribute exists
+                        output += self.fitStr('Response Data:', dnsPacket.an.rdata) #specify the rdata parameter
+            else: #means its a request packet
+                if dnsPacket.qd:
+                    output += f'Type: Request\n\n' #specifing its type
+                    output += self.fitStr('Request Name:', dnsPacket.qd.qname)
+                    output += f'Request Type: {dnsPacket.qd.qtype}, '
+                    output += f'Request Class: {dnsPacket.qd.qclass}\n\n'
+                    output += f'Num Requests: {len(dnsPacket.qd)}\n\n'
+        return output
 # --------------------------------------------DNS-END----------------------------------------------#
 
 #-----------------------------------------HELPER-FUNCTIONS-----------------------------------------#
@@ -396,6 +412,16 @@ def handleUDP(packet):
     return UDP_Object
 
 
+def handleDNS(packet):
+    global packetCounter
+    DNS_Object = DNS_Packet(packet, packetCounter)
+    packetDicitionary[DNS_Object.getId()] = DNS_Object
+    packetCounter += 1
+    #print(Ether_Object.info())
+    #print(f'id: {packetCounter}')
+    return DNS_Object
+
+
 def handleICMP(packet):
     global packetCounter
     ICMP_Object = ICMP_Packet(packet, packetCounter)
@@ -424,15 +450,6 @@ def handleSTP(packet):
     #print(STP_Object.info())
     #print(f'id: {packetCounter}')
     return STP_Object
-
-def handleEther(packet):
-    global packetCounter
-    Ether_Object = Ether_Packet(packet, packetCounter)
-    packetDicitionary[Ether_Object.getId()] = Ether_Object
-    packetCounter += 1
-    #print(Ether_Object.info())
-    #print(f'id: {packetCounter}')
-    return Ether_Object
 
 #-----------------------------------------HANDLE-FUNCTIONS-END-----------------------------------------#
 
@@ -594,22 +611,22 @@ class PacketSniffer(QMainWindow):
             packetFilter += 'TCP,'
         if not self.UDPCheckBox.isChecked():
             packetFilter += 'UDP,'
+        if not self.DNSCheckBox.isChecked():
+            packetFilter += 'DNS,'
         if not self.ICMPCheckBox.isChecked():
             packetFilter += 'ICMP,'
         if not self.ARPCheckBox.isChecked():
             packetFilter += 'ARP,'
         if not self.STPCheckBox.isChecked():
             packetFilter += 'STP,'
-        if not self.EtherCheckBox.isChecked():
-            packetFilter += 'Ether,'
         #dicionary for packet kinds and their methods for handling:
         captureDictionary = {
         TCP: handleTCP,
+        DNS: handleDNS,
         UDP: handleUDP,
         ICMP: handleICMP,
         ARP: handleARP,
         STP: handleSTP,
-        Ether: handleEther
         }
         if packetFilter != '': #if packetFilter isn't empty it means we need to filter the dictionary 
             packetFilter.rstrip(',').split(',')
