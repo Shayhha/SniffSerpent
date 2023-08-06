@@ -701,22 +701,22 @@ class CustomMessageBox(QDialog):
         textLabel.setWordWrap(True) #set a wordWrap for better text representation
 
         if icon != 'NoIcon': #if true it means we need to set an icon for message box
-            icon_label = QLabel()
+            iconLabel = QLabel()
             if icon == 'Information':
-                icon_label.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxInformation).pixmap(QSize(64, 64)))
+                iconLabel.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxInformation).pixmap(QSize(64, 64)))
                 self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxInformation))
             elif icon == 'Warning':
-                icon_label.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning).pixmap(QSize(64, 64)))
+                iconLabel.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning).pixmap(QSize(64, 64)))
                 self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxWarning))
             elif icon == 'Critical':
-                icon_label.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxCritical).pixmap(QSize(64, 64)))
+                iconLabel.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxCritical).pixmap(QSize(64, 64)))
                 self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxCritical))
             elif icon == 'Question':
-                icon_label.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion).pixmap(QSize(64, 64)))
+                iconLabel.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion).pixmap(QSize(64, 64)))
                 self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
-            icon_label.setAlignment(Qt.AlignLeft) #set the icon to the left
+            iconLabel.setAlignment(Qt.AlignLeft) #set the icon to the left
             spacer = QSpacerItem(10, 10, QSizePolicy.Fixed, QSizePolicy.Fixed) #create new spacer for the message box
-            horizontalLayout.addWidget(icon_label) #add the icon to layout
+            horizontalLayout.addWidget(iconLabel) #add the icon to layout
             horizontalLayout.addItem(spacer) #add the spacer to layout
             horizontalLayout.addWidget(textLabel) #add the text label to layout
         else: #else no need for an icon 
