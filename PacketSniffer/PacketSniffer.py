@@ -472,13 +472,15 @@ class PacketCaptureThread(QThread):
     packetCaptured = pyqtSignal(object)
     interface = None #inerface of network (optional)
     packetQueue = None #packet queue pointer for the thread
+    PortandIp = None
     stopCapture = False #flag for capture status
 
-    def __init__(self, packetQueue, packetFilter, interface=None):
+    def __init__(self, packetQueue, packetFilter, PortandIp, interface=None):
         super(PacketCaptureThread, self).__init__()
         self.interface = interface #initialize the network interface if given
         self.packetQueue = packetQueue #setting the packetQueue from the packet sniffer class
         self.packetFilter = packetFilter
+        self.PortandIp = PortandIp
 
     #methdo that handles stopping the scan
     def stop(self):
@@ -504,9 +506,9 @@ class PacketCaptureThread(QThread):
     #run method for the thread, initialzie the scan, call scapy sniff method with necessary parameters
     def run(self):
         if self.interface is not None:
-            sniff(iface=self.interface, prn=self.PacketCapture, filter='', stop_filter=self.checkStopFlag, store=0)
+            sniff(iface=self.interface, prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
         else:
-            sniff(prn=self.PacketCapture, filter='', stop_filter=self.checkStopFlag, store=0)
+            sniff(prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
 
 #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
     
@@ -516,6 +518,7 @@ class PacketSniffer(QMainWindow):
     packetCaptureThread = None #current thread that capturing packets 
     packetModel = None #packet list model for QListView 
     packetQueue = None #queue for packets before adding them to list (thread safe)
+    validIp = True #set validIp flag to true
 
     def __init__(self):
         super(PacketSniffer, self).__init__()
@@ -547,13 +550,13 @@ class PacketSniffer(QMainWindow):
     #method to check the IP Line edit validity in gui (using signals)
     def checkIPValidity(self):
         ip = self.IPLineEdit.text().strip() #get the ip user entered in gui
-        validIp = True #set validIp flag to true
 
         if ip: #if ip is set, we check
             octets = ip.split(".") #splite the ip into 4 octets
-            validIp = len(octets) == 4 and all(o.isdigit() and 0 <= int(o) <= 255 for o in octets) #check if ip is valid and not missing numbers (e.g 192.168.1.1)
-
-        if validIp: #if ip is valid we set the default style of the edit line lable
+            self.validIp = (len(octets) == 4 and all(o.isdigit() and 0 <= int(o) <= 255 for o in octets))  #check if ip is valid and not missing numbers (e.g 192.168.1.1)
+        else: #else ip is empty so its not specified by user (optional)
+            self.validIp = True #set the validIp flag to true
+        if self.validIp: #if ip is valid we set the default style of the edit line lable
             style = "background-color: rgba(247, 247, 247,150); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: black;	padding: 4px;"
             self.IPLineEdit.setStyleSheet(style)
         else: #else the user input is invalid, we show a red border on the edit line lable for error indication
@@ -575,9 +578,16 @@ class PacketSniffer(QMainWindow):
     #method to handle the start scan button, initializing the packet sniffing
     def StartScanClicked(self):
         if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning(): #checks if no thread is set for sniffer 
-            packetFilter = self.packetFilter() #call packet filter for filtered dictionary based on check boxes state
+            try:
+                packetFilter = self.packetFilter() #call packet filter for filtered dictionary based on check boxes state
+                PortAndIP = self.getPortIP() #call the getPortId method to recevie the input for port and ip from user
+            except (Exception, ValueError) as e: #if an exception is raised we show a messagebox for user with the error
+                title = 'Format Error' if not self.validIp else 'Type Error'
+                icon = 'Warning' if title == 'Format Error' else 'Critical'
+                CustomMessageBox(title, str(e), icon)
+                return #stop the initialization of scan
             self.StopScanClicked()  #stop previous capture thread if exists
-            self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter) #initialzie the packet thread with the queue we initialized
+            self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP) #initialzie the packet thread with the queue we initialized
             self.packetCaptureThread.packetCaptured.connect(self.addPacketToQueue) #connect the packet thread to addPacketToQueue method
             self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
             #start a QTimer to periodically check the packet queue and update the GUI
@@ -629,15 +639,32 @@ class PacketSniffer(QMainWindow):
         STP: handleSTP,
         }
         if packetFilter != '': #if packetFilter isn't empty it means we need to filter the dictionary 
-            packetFilter.rstrip(',').split(',')
-            temp = captureDictionary.copy()
-            for packetType, handler in temp.items():
-                p = str(packetType).split('.')[3].rstrip("'>")
-                if p in packetFilter:
-                    del captureDictionary[packetType]
+            packetFilter.rstrip(',').split(',') #splite the original string to get a list of the packet types
+            temp = captureDictionary.copy() #save the original dictionary in temp var
+            for packetType, handler in temp.items(): #iterating on the dictionary to remove the filtered packets
+                p = str(packetType).split('.')[3].rstrip("'>") #strip the str representation of the packet for extracting its name
+                if p in packetFilter: #if true we need to delete the packet type from the dictionary
+                    del captureDictionary[packetType] #delete packet from dictionary
+        if not captureDictionary: #if dictionary is empty we raise a new exception to indicate of an error 
+            raise Exception('Error, you must choose at least one type for scan.')
         return captureDictionary
-        
-        
+     
+
+    #method that checks the ip and port line edit lables, if valid it returns the string representing the option, else raises a ValueError exception
+    def getPortIP(self):
+        output = ''
+        if self.IPLineEdit.text() != '': #if true user typed a ip for us to search for 
+            if not self.validIp: #if ip isnt valid we raise a ValueError exeption
+                raise ValueError('Error, please enter a valid IP address in the format {xxx.xxx.xxx.xxx}.')
+            else: #else the ip is valid we add it to output string
+                output += f'(src {self.IPLineEdit.text()} or {self.IPLineEdit.text()})'
+        if self.PortLineEdit.text() != '': #if user typed a port to seach for
+            if output != '': #if true we need to divide the ip and port with 'add' word 
+                output += ' and ' #add the word that divides the ip and port
+            output += f'port {self.PortLineEdit.text()}' #add the port to the output
+        return output
+
+
     #method for updating the packet list
     def updatePacketList(self):
         while self.packetCaptureThread != None and not self.packetQueue.empty(): #check if there's a thread running and if the queue no empty
