@@ -8,12 +8,10 @@ from scapy.layers.dns import DNSQR, DNSRR
 from scapy.all import Raw
 import netifaces
 from PyQt5.uic import loadUi
-from PyQt5.QtCore import pyqtSignal, QThread, QTimer
-from PyQt5 import QtWidgets, Qt, QtGui
-from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGroupBox, QWidget, QCheckBox, QDesktopWidget, QVBoxLayout, QMessageBox
+from PyQt5.QtCore import pyqtSignal, Qt, QThread, QTimer, QSize, QRegExp
+from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QRegExpValidator, QIntValidator
+from PyQt5.QtWidgets import QApplication, QDesktopWidget, QMainWindow, QWidget, QCheckBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy, QMessageBox, QDialog, QLabel, QPushButton, QStyle, QHBoxLayout
 from queue import Queue
-
 
 
 #--------------------------------------------Default_Packet----------------------------------------------#
@@ -47,20 +45,34 @@ class Default_Packet(ABC): #abstarct class for default packet
         return output
     
 
-    def dnsInfo(self):
+    def dnsInfo(self, extended=True):
         output = ''
         if DNSQR in self.packet:
             dnsQry = self.packet[DNSQR].qname.decode('utf-8')
-            if len(dnsQry) >= 50:
-                dnsQry = '\n'.join(dnsQry[i:i+50] for i in range(0, len(dnsQry), 50))
-            output += f'DNS Query: {dnsQry}'
+            if extended:
+                if len(dnsQry) >= 45:
+                    dnsQry = '\n'.join(dnsQry[i:i+45] for i in range(0, len(dnsQry), 45))
+                    output += f'DNS Query:\n{dnsQry}'
+                elif len(f'DNS Query: {dnsQry}') >=45:
+                    output += f'DNS Query:\n{dnsQry}'
+                else:
+                    output += f'DNS Query: {dnsQry}'
+            else:
+                 if len(f'DNS Query: {dnsQry}') >=45:
+                    output += f'DNS Query:\n{dnsQry}'
+                 else:
+                    output += f'DNS Query: {dnsQry}'
         elif DNSRR in self.packet:
             dnsAns = self.packet[DNSRR].rdata
             if not isinstance(dnsAns, list) and isinstance(dnsAns, bytes):
                 dnsAns = dnsAns.decode('utf-8')
-                if len(dnsAns) >= 50:
-                    dnsAns = '\n'.join(dnsAns[i:i+50] for i in range(0, len(dnsAns), 50))
-            output += f'DNS Answer: {dnsAns}'
+                if len(dnsAns) >= 45:
+                    dnsAns = '\n'.join(dnsAns[i:i+45] for i in range(0, len(dnsAns), 45))
+                    output += f'DNS Answer:\n{dnsAns}'
+                elif len(f'DNS Answer: {dnsAns}') >=45:
+                    output += f'DNS Answer:\n{dnsAns}'
+                else:
+                    output += f'DNS Answer: {dnsAns}'
         return output
 
 
@@ -102,13 +114,13 @@ class Default_Packet(ABC): #abstarct class for default packet
             dstPort = self.packet[self.packetType].dport
 
         if (self.packetType == TCP or self.packetType == UDP) and self.packet.haslayer(IP):
-            output += f'{self.name} Packet: {srcIp}:{srcPort} --> {dstIp}:{dstPort}'
+            output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})'
         elif (self.packetType == TCP or self.packetType == UDP) and not self.packet.haslayer(IP):
-            output += f'{self.name} Packet: {srcMac}:{srcPort} --> {dstMac}:{dstPort}'
+            output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})'
         elif self.packetType == Ether and self.packet.haslayer(IP):
-            output += f'{self.name} Packet: {srcMac}:({srcIp}) --> {dstMac}:({dstIp})'
+            output += f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac})'
         elif self.packetType == Ether and not self.packet.haslayer(IP):
-            output += f'{self.name} Packet: {srcMac} --> {dstMac}'
+            output += f'{self.name} Packet: ({srcMac}) --> ({dstMac})'
 
         dnsInfo = self.dnsInfo() #call dns method
         if dnsInfo != '':
@@ -169,17 +181,22 @@ class TCP_Packet(Default_Packet):
         output += 'Flags:\n'
         temp = ''
         for flag, value in flagsDict.items():
+            if flag == 'ACK':
+                temp += '\n'
             temp += f'{flag}: {value}, '
         output += temp.rstrip(', ')
         output += '\n\n'
         if self.packet[self.packetType].options: # print TCP Options (if available)
             temp = ''
+            count = 0
             output += 'TCP Options:\n'
             for option in self.packet[self.packetType].options:
+                if count == 4 or option[0] == 'SAck':
+                    temp += '\n'
                 temp += f'{option[0]}: {option[1]}, '
+                count += 1
             output += temp.rstrip(', ')
             output += '\n\n'
-            
         return output
 
 #--------------------------------------------TCP-END----------------------------------------------#
@@ -215,7 +232,7 @@ class ICMP_Packet(Default_Packet):
         if IP in self.packet:
             srcIp = self.packet[IP].src
             dstIp = self.packet[IP].dst
-            output += f'{self.name} Packet: {srcIp} --> {dstIp} | Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes'
+            output += f'{self.name} Packet: ({srcIp}) --> ({dstIp}) | Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes'
         else:
             output += f'{self.name} Packet: --> {self.packet.summary()}, Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes'
         return output
@@ -254,7 +271,7 @@ class ARP_Packet(Default_Packet):
         dstMac = self.packet[ARP].hwdst
         dstIp = self.packet[ARP].pdst
         packetSize = len(self.packet)
-        output += f'{self.name} Packet: {srcMac}:({srcIp}) --> {dstMac}:({dstIp}) | Size: {packetSize} bytes'
+        output += f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac}) | Size: {packetSize} bytes'
         return output
 
 
@@ -287,7 +304,7 @@ class STP_Packet(Default_Packet):
     def info(self):
             output = ''
             packet_size = len(self.packet)
-            output += f'{self.name} Packet: {self.packet.src} --> {self.packet.dst} | Size: {packet_size} bytes'
+            output += f'{self.name} Packet: ({self.packet.src}) --> ({self.packet.dst}) | Size: {packet_size} bytes'
             return output
 
     def moreInfo(self):
@@ -311,7 +328,7 @@ class STP_Packet(Default_Packet):
         output += f'Packet Size: {len(self.packet)} bytes\n\n'
         return output
 
-    # --------------------------------------------STP-END----------------------------------------------#
+# --------------------------------------------STP-END----------------------------------------------#
 
 # --------------------------------------------Ether----------------------------------------------#
 class Ether_Packet(Default_Packet):
@@ -329,6 +346,11 @@ class Ether_Packet(Default_Packet):
         return output
 
 # --------------------------------------------Ether-END----------------------------------------------#
+
+# -----------------------------------------------DNS------------------------------------------------#
+
+#TODO
+# --------------------------------------------DNS-END----------------------------------------------#
 
 #-----------------------------------------HELPER-FUNCTIONS-----------------------------------------#
 
@@ -425,37 +447,6 @@ def signalHandler(signal, frame): # handle method for stopping the program
 
 signal.signal(signal.SIGINT, signalHandler) # signal the stopping operation
 
-#def PacketCapture(packet): # method that handles the packet capturing
-#    #dicionary for packet kinds and their methods for handling:
-#    CaptureDicitionary = {
-#    TCP: handleTCP,
-#    UDP: handleUDP,
-#    ICMP: handleICMP,
-#    ARP: handleARP,
-#    STP: handleSTP,
-#    Ether: handleEther
-#    }
-#    #for each packet we receive we send it to the dict to determine its identity and call the necessary handle method
-#    for packetType, handler in CaptureDicitionary.items():
-#        if packet.haslayer(packetType):
-#            handler(packet)
-#            break
-#    else:
-#        print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet')
-#    if stopCapture:
-#        print('Packet capturing stopped.')
-#        sys.exit(0)  # exit the program 
-
-
-# method to initalize the sniffer
-#def InitSniff(interface=None):
-#    try:
-#        if interface != None:
-#            sniff(iface = interface, prn = PacketCapture, filter='', store=0) #calling scapy sniff method
-#        else:
-#            sniff(prn = PacketCapture, filter='tcp', store=0)
-#    except KeyboardInterrupt:
-#        print('\nKeyboard interrupted program (possible exception)')
 #-----------------------------------------HELPER-FUNCTIONS-END-----------------------------------------#
 
 #--------------------------------------------PacketCaptureThread----------------------------------------------#
@@ -496,11 +487,11 @@ class PacketCaptureThread(QThread):
     #run method for the thread, initialzie the scan, call scapy sniff method with necessary parameters
     def run(self):
         if self.interface is not None:
-            sniff(iface=self.interface, prn=self.PacketCapture, filter='tcp', stop_filter=self.checkStopFlag, store=0)
+            sniff(iface=self.interface, prn=self.PacketCapture, filter='', stop_filter=self.checkStopFlag, store=0)
         else:
             sniff(prn=self.PacketCapture, filter='', stop_filter=self.checkStopFlag, store=0)
 
-    #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
+#--------------------------------------------PacketCaptureThread-END----------------------------------------------#
     
 #---------------------------------------------------Application----------------------------------------------------#
 
@@ -516,13 +507,15 @@ class PacketSniffer(QMainWindow):
         self.packetModel = QStandardItemModel() #set the QListView model for adding items to it
         self.PacketList.setModel(self.packetModel) #set the model for the packetlist in gui
         self.packetQueue = Queue() #initialize the packet queue
-
+        
 
     def initUI(self):
         self.setWindowTitle('Packet Sniffer') #set title of window
         self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
         self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
         self.PacketList.doubleClicked.connect(self.handleItemDoubleClicked) #add method to handle clicks on the items in packet list
+        self.setLineEditValidate() #call the method to set the validators for the QLineEdit for port and ip
+        self.IPLineEdit.textChanged.connect(self.checkIPValidity) #connect signal for textChanged for IP to determine its validity
         self.center() #make the app open in center of screen
         self.show() #show the application
 		
@@ -534,6 +527,33 @@ class PacketSniffer(QMainWindow):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
     
+    #method to check the IP Line edit validity in gui (using signals)
+    def checkIPValidity(self):
+        ip = self.IPLineEdit.text().strip() #get the ip user entered in gui
+        validIp = True #set validIp flag to true
+
+        if ip: #if ip is set, we check
+            octets = ip.split(".") #splite the ip into 4 octets
+            validIp = len(octets) == 4 and all(o.isdigit() and 0 <= int(o) <= 255 for o in octets) #check if ip is valid and not missing numbers (e.g 192.168.1.1)
+
+        if validIp: #if ip is valid we set the default style of the edit line lable
+            style = "background-color: rgba(247, 247, 247,150); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: black;	padding: 4px;"
+            self.IPLineEdit.setStyleSheet(style)
+        else: #else the user input is invalid, we show a red border on the edit line lable for error indication
+            style = "background-color: rgba(247, 247, 247,150); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: red; padding: 4px;"
+            self.IPLineEdit.setStyleSheet(style)
+    
+
+    #method for setting the settings for ip and port line edit lables
+    def setLineEditValidate(self):
+        IPRegex = QRegExp("^((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)$") #regex for IP template (192.168.1.1)
+        IPValidator = QRegExpValidator(IPRegex) #create the validator for ip using the regex
+        portValidator = QIntValidator(0, 65535) #create a validator for port (number between 0 to 65535)
+        self.IPLineEdit.setValidator(IPValidator) #set validator for IP
+        self.IPLineEdit.setPlaceholderText("Optional") #set placeholder text for IP
+        self.PortLineEdit.setValidator(portValidator) #set validaotr for port
+        self.PortLineEdit.setPlaceholderText("Optional") #set placeholder text for port
+
 
     #method to handle the start scan button, initializing the packet sniffing
     def StartScanClicked(self):
@@ -557,9 +577,10 @@ class PacketSniffer(QMainWindow):
             self.packetCaptureThread.stop() #calls stop method of the thread 
             self.packetCaptureThread.exit() #kills the thread 
             self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan 
-            QMessageBox.information(self, "Scan Stopped", "Packet capturing stopped.") #message box for stop scan
+            #QMessageBox.information(self, "Scan Stopped", "Packet capturing stopped.") #message box for stop scan
+            CustomMessageBox("Scan Stopped", "Error, you have to choose at least one type", 'Information')
 
-
+    
     #method to handle adding packets to queue
     def addPacketToQueue(self, packetInfo):
         self.packetQueue.put(packetInfo) #add packet to queue
@@ -617,7 +638,73 @@ class PacketSniffer(QMainWindow):
 
 #---------------------------------------------------Application-END----------------------------------------------------#
 
-#--------------------------------------------MAIN----------------------------------------------#
+#---------------------------------------------------CustomMessageBox----------------------------------------------------#
+class CustomMessageBox(QDialog):
+    def __init__(self, title, text, icon='NoIcon', width=400, height=150, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title) #set the title for message box
+        self.setWindowFlags(Qt.Dialog | Qt.WindowTitleHint | Qt.CustomizeWindowHint | Qt.WindowCloseButtonHint) #set the window flags
+        self.setFixedSize(QSize(width, height)) #set the width and height for window
+        self.initMessageBox(text, icon) #call initMessageBox for initializing the message box
+        self.exec_() #execute the message box (show)
+
+    def initMessageBox(self, text, icon):
+        layout = QVBoxLayout() #create new layout
+        horizontalLayout = QHBoxLayout() #create new horizontal layout
+        textLabel = QLabel(text) #creat a text lable 
+        textLabel.setAlignment(Qt.AlignCenter)  #set text alignment to center
+        textLabel.setStyleSheet("font-size: 18px;") #set font size of text
+        textLabel.setWordWrap(True) #set a wordWrap for better text representation
+
+        if icon != 'NoIcon': #if true it means we need to set an icon for message box
+            icon_label = QLabel()
+            if icon == 'Information':
+                icon_label.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxInformation).pixmap(QSize(64, 64)))
+                self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxInformation))
+            elif icon == 'Warning':
+                icon_label.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning).pixmap(QSize(64, 64)))
+                self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxWarning))
+            elif icon == 'Critical':
+                icon_label.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxCritical).pixmap(QSize(64, 64)))
+                self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxCritical))
+            elif icon == 'Question':
+                icon_label.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion).pixmap(QSize(64, 64)))
+                self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
+            icon_label.setAlignment(Qt.AlignLeft) #set the icon to the left
+            spacer = QSpacerItem(10, 10, QSizePolicy.Fixed, QSizePolicy.Fixed) #create new spacer for the message box
+            horizontalLayout.addWidget(icon_label) #add the icon to layout
+            horizontalLayout.addItem(spacer) #add the spacer to layout
+            horizontalLayout.addWidget(textLabel) #add the text label to layout
+        else: #else no need for an icon 
+            horizontalLayout.addWidget(textLabel) #add only the text label to layout
+
+        horizontalLayout.setAlignment(Qt.AlignCenter) #set alignment of horizontal layout
+        layout.addLayout(horizontalLayout) #add the horizontal layout to the vertical layout
+        OKButton = QPushButton("OK") #create new OK button
+        layout.addWidget(OKButton, alignment=Qt.AlignCenter) #add the button to the layout
+        style = """
+            QPushButton {
+                background-color: rgb(123, 180, 255);
+                border: 2px solid black;
+                border-radius: 15px;
+                padding: 4px;
+                font-size: 15px; 
+                min-width: 60px;  
+                min-height: 20px;
+            }
+            QPushButton:hover {
+                background-color: rgb(171, 201, 255);
+            }
+            QPushButton:pressed {
+                background-color: rgb(96, 141, 199);
+            }
+        """
+        OKButton.setStyleSheet(style) #set stylesheet for the OK button
+        OKButton.clicked.connect(self.accept) #set an accept operation to the clicks of OK button
+        self.setLayout(layout) #finally set the layout of the messsage box
+#---------------------------------------------------CustomMessageBox-END----------------------------------------------------#
+
+#-----------------------------------------------------------MAIN------------------------------------------------------------#
 
 if __name__ == '__main__':
     #----------------APP----------------#
