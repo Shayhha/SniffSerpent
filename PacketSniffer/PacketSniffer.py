@@ -533,6 +533,7 @@ class PacketSniffer(QMainWindow):
         self.setWindowTitle('Packet Sniffer') #set title of window
         self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
         self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
+        self.ClearButton.clicked.connect(self.ClearClicked) #add method to handle clear button 
         self.PacketList.doubleClicked.connect(self.handleItemDoubleClicked) #add method to handle clicks on the items in packet list
         self.setLineEditValidate() #call the method to set the validators for the QLineEdit for port and ip
         self.IPLineEdit.textChanged.connect(self.checkIPValidity) #connect signal for textChanged for IP to determine its validity
@@ -577,7 +578,7 @@ class PacketSniffer(QMainWindow):
 
     #method to handle the start scan button, initializing the packet sniffing
     def StartScanClicked(self):
-        if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning(): #checks if no thread is set for sniffer 
+        if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning(): #checks if no thread is set for sniffer  
             try:
                 packetFilter = self.packetFilter() #call packet filter for filtered dictionary based on check boxes state
                 PortAndIP = self.getPortIP() #call the getPortId method to recevie the input for port and ip from user
@@ -586,6 +587,7 @@ class PacketSniffer(QMainWindow):
                 icon = 'Warning' if title == 'Format Error' else 'Critical'
                 CustomMessageBox(title, str(e), icon)
                 return #stop the initialization of scan
+            self.ClearClicked() #call clear method for clearing the memory and screen for new scan
             self.StopScanClicked()  #stop previous capture thread if exists
             self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP) #initialzie the packet thread with the queue we initialized
             self.packetCaptureThread.packetCaptured.connect(self.addPacketToQueue) #connect the packet thread to addPacketToQueue method
@@ -595,7 +597,9 @@ class PacketSniffer(QMainWindow):
             self.updateTimer.timeout.connect(self.updatePacketList) #connect a method that runs when time elapses
             self.updateTimer.start(2000) #setting the timer to elapse every 2 seconds (can adjust according to the load)
             self.packetCaptureThread.start() #calling the run method of the thread to start the scan
-            print("Start Scan button clicked")
+            print('Start Scan button clicked')
+        else:
+            CustomMessageBox('Scan Running', 'Scan is already running!', 'Information', False)
 
 
     #method to handle the stop scan button, stops the packet sniffing
@@ -604,10 +608,22 @@ class PacketSniffer(QMainWindow):
             self.packetCaptureThread.stop() #calls stop method of the thread 
             self.packetCaptureThread.exit() #kills the thread 
             self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan 
-            #QMessageBox.information(self, "Scan Stopped", "Packet capturing stopped.") #message box for stop scan
-            CustomMessageBox("Scan Stopped", "Error, you have to choose at least one type", 'Information')
-
+            CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False)
     
+    
+    def ClearClicked(self):
+        global packetDicitionary #declare global parameter for clearing packet dictionary
+        global packetCounter #declare global parameter for resetting the packet counter
+        if self.packetCaptureThread is None or (self.packetCaptureThread is not None and not self.packetCaptureThread.isRunning()):
+            packetDicitionary.clear() #clear the main packet dictionary
+            packetCounter = 0 #reset the packet counter
+            self.packetQueue = Queue() #clear the queue if there're packets in
+            self.updateTimer = None
+            self.PacketList.model().clear() #clear the packet list in GUI
+            self.MoreInfoLable.setText('') #clear the extended information in GUI
+        elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning():
+            CustomMessageBox('Thread Running Error', 'Cannot clear while scan is in progress!', 'Warning', False)
+        
     #method to handle adding packets to queue
     def addPacketToQueue(self, packetInfo):
         self.packetQueue.put(packetInfo) #add packet to queue
@@ -684,10 +700,11 @@ class PacketSniffer(QMainWindow):
 
 #---------------------------------------------------CustomMessageBox----------------------------------------------------#
 class CustomMessageBox(QDialog):
-    def __init__(self, title, text, icon='NoIcon', width=400, height=150, parent=None):
+    def __init__(self, title, text, icon='NoIcon',wordWrap=True, width=400, height=150, parent=None):
         super().__init__(parent)
         self.setWindowTitle(title) #set the title for message box
         self.setWindowFlags(Qt.Dialog | Qt.WindowTitleHint | Qt.CustomizeWindowHint | Qt.WindowCloseButtonHint) #set the window flags
+        self.wordWrap = wordWrap #set the wordWrap for text
         self.setFixedSize(QSize(width, height)) #set the width and height for window
         self.initMessageBox(text, icon) #call initMessageBox for initializing the message box
         self.exec_() #execute the message box (show)
@@ -698,7 +715,7 @@ class CustomMessageBox(QDialog):
         textLabel = QLabel(text) #creat a text lable 
         textLabel.setAlignment(Qt.AlignCenter)  #set text alignment to center
         textLabel.setStyleSheet("font-size: 18px;") #set font size of text
-        textLabel.setWordWrap(True) #set a wordWrap for better text representation
+        textLabel.setWordWrap(self.wordWrap) #set a wordWrap for better text representation
 
         if icon != 'NoIcon': #if true it means we need to set an icon for message box
             iconLabel = QLabel()
