@@ -469,7 +469,7 @@ signal.signal(signal.SIGINT, signalHandler) # signal the stopping operation
 #--------------------------------------------PacketCaptureThread----------------------------------------------#
 
 class PacketCaptureThread(QThread):
-    packetCaptured = pyqtSignal(object)
+    packetCaptured = pyqtSignal() #signal for the thread to update the main for changes
     interface = None #inerface of network (optional)
     packetQueue = None #packet queue pointer for the thread
     PortandIp = None
@@ -481,6 +481,10 @@ class PacketCaptureThread(QThread):
         self.packetQueue = packetQueue #setting the packetQueue from the packet sniffer class
         self.packetFilter = packetFilter
         self.PortandIp = PortandIp
+        self.updateTimer = QTimer(self) #initialzie the QTimer
+        self.updateTimer.timeout.connect(lambda: self.packetCaptured.emit()) #connect the signal to gui to update the packet list when timer elapses
+        self.updateTimer.start(2000) #setting the timer to elapse every 2 seconds (can adjust according to the load)
+
 
     #methdo that handles stopping the scan
     def stop(self):
@@ -553,7 +557,7 @@ class PacketSniffer(QMainWindow):
         ip = self.IPLineEdit.text().strip() #get the ip user entered in gui
 
         if ip: #if ip is set, we check
-            octets = ip.split(".") #splite the ip into 4 octets
+            octets = ip.split('.') #splite the ip into 4 octets
             self.validIp = (len(octets) == 4 and all(o.isdigit() and 0 <= int(o) <= 255 for o in octets))  #check if ip is valid and not missing numbers (e.g 192.168.1.1)
         else: #else ip is empty so its not specified by user (optional)
             self.validIp = True #set the validIp flag to true
@@ -571,9 +575,9 @@ class PacketSniffer(QMainWindow):
         IPValidator = QRegExpValidator(IPRegex) #create the validator for ip using the regex
         portValidator = QIntValidator(0, 65535) #create a validator for port (number between 0 to 65535)
         self.IPLineEdit.setValidator(IPValidator) #set validator for IP
-        self.IPLineEdit.setPlaceholderText("Optional") #set placeholder text for IP
+        self.IPLineEdit.setPlaceholderText('Optional') #set placeholder text for IP
         self.PortLineEdit.setValidator(portValidator) #set validaotr for port
-        self.PortLineEdit.setPlaceholderText("Optional") #set placeholder text for port
+        self.PortLineEdit.setPlaceholderText('Optional') #set placeholder text for port
 
 
     #method to handle the start scan button, initializing the packet sniffing
@@ -588,14 +592,8 @@ class PacketSniffer(QMainWindow):
                 CustomMessageBox(title, str(e), icon)
                 return #stop the initialization of scan
             self.ClearClicked() #call clear method for clearing the memory and screen for new scan
-            self.StopScanClicked()  #stop previous capture thread if exists
             self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP) #initialzie the packet thread with the queue we initialized
-            self.packetCaptureThread.packetCaptured.connect(self.addPacketToQueue) #connect the packet thread to addPacketToQueue method
             self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
-            #start a QTimer to periodically check the packet queue and update the GUI
-            self.updateTimer = QTimer(self) #initialzie the QTimer
-            self.updateTimer.timeout.connect(self.updatePacketList) #connect a method that runs when time elapses
-            self.updateTimer.start(2500) #setting the timer to elapse every 2.5 seconds (can adjust according to the load)
             self.packetCaptureThread.start() #calling the run method of the thread to start the scan
             print('Start Scan button clicked')
         else:
@@ -618,16 +616,11 @@ class PacketSniffer(QMainWindow):
             packetDicitionary.clear() #clear the main packet dictionary
             packetCounter = 0 #reset the packet counter
             self.packetQueue = Queue() #clear the queue if there're packets in
-            self.updateTimer = None
             self.PacketList.model().clear() #clear the packet list in GUI
             self.MoreInfoLable.setText('') #clear the extended information in GUI
         elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning():
             CustomMessageBox('Thread Running Error', 'Cannot clear while scan is in progress!', 'Warning', False)
         
-    #method to handle adding packets to queue
-    def addPacketToQueue(self, packetInfo):
-        self.packetQueue.put(packetInfo) #add packet to queue
-    
 
     #method that checks all the check boxs state, return a string with filtered packets
     def packetFilter(self):
@@ -688,6 +681,7 @@ class PacketSniffer(QMainWindow):
                 packetInfo = self.packetQueue.get() #taking a packet from the queue
                 self.packetModel.appendRow(QStandardItem(packetInfo)) #adding to packet list in GUI
 
+
     #method the double clicks in packet list, extended information section
     def handleItemDoubleClicked(self, index):
         packetIndex = index.row() #get the index of the row of the specific packet we want
@@ -741,7 +735,7 @@ class CustomMessageBox(QDialog):
 
         horizontalLayout.setAlignment(Qt.AlignCenter) #set alignment of horizontal layout
         layout.addLayout(horizontalLayout) #add the horizontal layout to the vertical layout
-        OKButton = QPushButton("OK") #create new OK button
+        OKButton = QPushButton('OK') #create new OK button
         layout.addWidget(OKButton, alignment=Qt.AlignCenter) #add the button to the layout
         style = """
             QPushButton {
@@ -774,7 +768,7 @@ if __name__ == '__main__':
     try:
         sys.exit(app.exec_())
     except:
-        print("Exiting")
+        print('Exiting')
     #----------------APP----------------#
     #GetAvailableNetworkInterfaces()
     #InitSniff()
