@@ -596,7 +596,7 @@ class PacketSniffer(QMainWindow):
             self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
             self.packetCaptureThread.start() #calling the run method of the thread to start the scan
             print('Start Scan button clicked')
-        else:
+        else: #else we show error message
             CustomMessageBox('Scan Running', 'Scan is already running!', 'Information', False)
 
 
