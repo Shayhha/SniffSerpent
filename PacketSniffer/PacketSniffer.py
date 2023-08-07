@@ -595,7 +595,7 @@ class PacketSniffer(QMainWindow):
             #start a QTimer to periodically check the packet queue and update the GUI
             self.updateTimer = QTimer(self) #initialzie the QTimer
             self.updateTimer.timeout.connect(self.updatePacketList) #connect a method that runs when time elapses
-            self.updateTimer.start(2000) #setting the timer to elapse every 2 seconds (can adjust according to the load)
+            self.updateTimer.start(2500) #setting the timer to elapse every 2.5 seconds (can adjust according to the load)
             self.packetCaptureThread.start() #calling the run method of the thread to start the scan
             print('Start Scan button clicked')
         else:
@@ -683,10 +683,10 @@ class PacketSniffer(QMainWindow):
 
     #method for updating the packet list
     def updatePacketList(self):
-        while self.packetCaptureThread != None and not self.packetQueue.empty(): #check if there's a thread running and if the queue no empty
-            packetInfo = self.packetQueue.get() #taking a packet from the queue
-            self.packetModel.appendRow(QStandardItem(packetInfo)) #adding to packet list in GUI
-
+        if self.packetCaptureThread != None and self.packetQueue.qsize() >=20: #we add packets when queue has at least 20 waiting
+            while not self.packetQueue.empty(): #add the packets to packet list while queue not empty
+                packetInfo = self.packetQueue.get() #taking a packet from the queue
+                self.packetModel.appendRow(QStandardItem(packetInfo)) #adding to packet list in GUI
 
     #method the double clicks in packet list, extended information section
     def handleItemDoubleClicked(self, index):
