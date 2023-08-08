@@ -10,166 +10,170 @@ import netifaces
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import pyqtSignal, Qt, QThread, QTimer, QSize, QRegExp
 from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QRegExpValidator, QIntValidator
-from PyQt5.QtWidgets import QApplication, QDesktopWidget, QMainWindow, QWidget, QCheckBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy, QMessageBox, QDialog, QLabel, QPushButton, QStyle, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QDesktopWidget, QMainWindow, QWidget, QCheckBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy, QMessageBox, QDialog, QLabel, QPushButton, QStyle, QHBoxLayout, QFileDialog
 from queue import Queue
 
 
 #--------------------------------------------Default_Packet----------------------------------------------#
 class Default_Packet(ABC): #abstarct class for default packet
-    name=None
-    packet = None
-    packetType = None
-    id = None
+    name = None #represents the packet name
+    packet = None #represents the packet object itself for our use later
+    packetType = None #represents the packet type based on scapy known types
+    id = None #represents the id for the packet object, for ease of use in dictionary later
 
-    def __init__(self, name=None, packet=None, id=None): # ctor 
+    def __init__(self, name=None, packet=None, id=None): #ctor for default packet 
         self.name = name
         self.packet = packet
         self.id = id
+        
 
-
-    def getId(self): # get method for id
-        return self.id
+    #get method for id
+    def getId(self): 
+        return self.id #return the id 
     
-    def setPacketType(self, packetType): #set method for packet type
+
+    #set method for packet type
+    def setPacketType(self, packetType): 
         self.packetType = packetType
 
+
+    #get method for packet object
     def getPacket(self):
-        return self.packet
+        return self.packet #return the packet object
     
 
-    def rawInfo(self): #method for raw info capture
+    #method for raw info capture
+    def rawInfo(self):
         output = ''
-        if Raw in self.packet: # insert Payload Data (if available)
-            payload = self.packet[Raw].load
-            output += f'Payload Data: {payload.hex()}\n'  # insert payload as hexadecimal
+        if Raw in self.packet: #insert payload data (if available)
+            payload = self.packet[Raw].load #get payload data from packet
+            output += f'Payload Data: {payload.hex()}\n' #insert payload as hexadecimal
         return output
     
 
-    def fitStr(self, st, info): #method that handles a long string and makes it fit in the GUI 
+    #method that handles a long string and makes it fit in the GUI 
+    def fitStr(self, st, info): 
         output = ''
-        if isinstance(info, bytes):
-            info = info.decode('utf-8', errors='replace')
-        if len(info) >= 46:
-            temp = '\n'.join(info[i:i+46] for i in range(0, len(info), 46))
-            output += f'{st}\n{temp}\n\n'
-        elif len(f'DNS Query: {info}') >=46:
-            output += f'{st}\n{info}\n\n'
-        else:
-            output += f'{st} {info}\n\n'
+        if isinstance(info, bytes): #if given info is byte we convert it to utf-8 string
+            info = info.decode('utf-8', errors='replace') #decode the byte to string
+        if len(info) >= 46: #if the string is longer then specified length we add a new line
+            temp = '\n'.join(info[i:i+46] for i in range(0, len(info), 46)) #iterating over the string and adding new line after specified amount of characters
+            output += f'{st}\n{temp}\n\n' #insert to the output 
+        elif len(f'{st}: {info}') >=46: #if the info string and st string togther exceed the specified characters we add new line
+            output += f'{st}\n{info}\n\n' #insert to the output
+        else: #else info and st strings are not exceeding the specifed amount of characters
+            output += f'{st} {info}\n\n' #we add the original info and st strings to the output without a new line
         return output
 
 
-    def ipInfo(self): # method for ip configuration capture
+    #method for ip configuration capture
+    def ipInfo(self): 
         output = ''
-        if IP in self.packet: 
-            srcIp = self.packet[IP].src
-            dstIp = self.packet[IP].dst
-            output += f'Source IP: {srcIp}\n\n'
-            output += f'Destination IP: {dstIp}\n\n'
-            # additional Information for IPv4 and IPv6 packets
-            if self.packet[IP].version == 4:
-                ttl = self.packet[IP].ttl
-                dscp = self.packet[IP].tos
-                output += f'TTL: {ttl}, DSCP: {dscp}\n\n'
+        if IP in self.packet: #if true means packet has ip layer
+            srcIp = self.packet[IP].src #represents the source ip
+            dstIp = self.packet[IP].dst #represents the destination ip
+            output += f'Source IP: {srcIp}\n\n' #insert source ip to output
+            output += f'Destination IP: {dstIp}\n\n' #insert denstination ip to output
+            #additional Information for IPv4 and IPv6 packets
+            if self.packet[IP].version == 4: #if true we have ipv4 packet
+                ttl = self.packet[IP].ttl #represents ttl parameter in packet
+                dscp = self.packet[IP].tos #represents dscp parameter in packet
+                output += f'TTL: {ttl}, DSCP: {dscp}\n\n' #add both to output
 
-            elif self.packet[IP].version == 6:
-                hopLimit = self.packet[IPv6].hlim
-                trafficClass = self.packet[IPv6].tc
-                output += f'Hop Limit: {hopLimit}, Traffic Class: {trafficClass}\n\n'
-        if hasattr(self.packet, 'chksum'):
-            output += f'Checksum: {self.packet.chksum}\n\n'
-        output += f'Packet Size: {len(self.packet)} bytes\n\n'
+            elif self.packet[IP].version == 6: #else we have an ipv6 packet
+                hopLimit = self.packet[IPv6].hlim #represents the hop limit parameter in packet
+                trafficClass = self.packet[IPv6].tc #represnets the traffic class in packet
+                output += f'Hop Limit: {hopLimit}, Traffic Class: {trafficClass}\n\n' #add them both to output
+        if hasattr(self.packet, 'chksum'): #if packey has checksum parameter
+            output += f'Checksum: {self.packet.chksum}\n\n' #we add the checksum to output
+        output += f'Packet Size: {len(self.packet)} bytes\n\n' #add the packet size to output
         return output
 
 
-    def info(self): # method to print packet information
-        output ='' # output string for information of packet
-        srcMac = self.packet.src
-        dstMac = self.packet.dst
-        srcPort = ''
-        dstPort =''
-        packetSize = len(self.packet)
+    #method representing the packet briefly, derived classes may need to implement for different types
+    def info(self): 
+        output ='' #output string for information of packet
+        srcMac = self.packet.src #represents the source mac address
+        dstMac = self.packet.dst #represents the destination mac address
+        srcPort = '' #source port of packet
+        dstPort ='' #destination port of packet
+        packetSize = len(self.packet) #size of the packet
 
-        if self.packet.haslayer(IP):
-            srcIp = self.packet[IP].src
-            dstIp = self.packet[IP].dst
-        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP):
-            srcPort = self.packet.sport
-            dstPort = self.packet.dport
-
-        if self.packet.haslayer(IP):
-            output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})'
-        elif not self.packet.haslayer(IP):
-            output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})'
-
-        output += f' | Size: {packetSize} bytes'
+        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP): #id packet is tcp or udp we get port info
+            srcPort = self.packet.sport #represents the source port of packet
+            dstPort = self.packet.dport #represents the destination port of packet
+        if self.packet.haslayer(IP): #if true packet have ip address so we print the packet info with ip and port
+            srcIp = self.packet[IP].src #represents the source ip of packet
+            dstIp = self.packet[IP].dst #represents the destination ip of packet
+            output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #insert info to output
+        elif not self.packet.haslayer(IP): #else no ip layer 
+            output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #insert info without ip to output
+        output += f' | Size: {packetSize} bytes' #insert packet size to output
         return output
 
 
-    def moreInfo(self): # method to print more information for derived classes to implement
-        output = ''
-        # print the packet information
-        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP):
-            output += f'{self.name} Packet:\n\n' 
-            output += f'Source Port: {self.packet.sport}\n\n'
-            output += f'Destination Port: {self.packet.dport}\n\n'
-        else:
-            output += f'{self.name} Packet:\n\n'
-            output += f'Source MAC: {self.packet.src}\n\n'
-            output += f'Destination MAC: {self.packet.dst}\n\n'
-
-        output += self.ipInfo() #call ip method 
+    #method that represents the packet information more deeply, for derived classes to implement further
+    def moreInfo(self):
+        output = '' #output string for info
+        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP): #if packet is tcp or udp
+            output += f'{self.name} Packet:\n\n' #insert packet name to output
+            output += f'Source Port: {self.packet.sport}\n\n' #insert source port to output
+            output += f'Destination Port: {self.packet.dport}\n\n' #insert destination port to output
+        else: #else its other packet type
+            output += f'{self.name} Packet:\n\n' #insert packet name to output
+            output += f'Source MAC: {self.packet.src}\n\n' #insert packet source mac address
+            output += f'Destination MAC: {self.packet.dst}\n\n' #insert packet destination mac address
+        output += self.ipInfo() #call ip method to add neccessary info if ip layer is present
         return output
 
 
 #--------------------------------------------Default_Packet-END----------------------------------------------#
 
-    
 #--------------------------------------------TCP----------------------------------------------#
 class TCP_Packet(Default_Packet):
- 
-    def __init__(self, packet=None, id=None): # ctor 
+    def __init__(self, packet=None, id=None): # ctor for tcp packet
         super().__init__('TCP', packet, id) # call parent ctor
         if packet.haslayer(TCP): #checks if packet is TCP
-            if IP not in packet:
-                self.name = 'Raw TCP'
-            self.packetType = TCP
+            if IP not in packet: #if true the packet is raw
+                self.name = 'Raw TCP' #specify its a raw packet
+            self.packetType = TCP #specify the packet type
 
 
-    def moreInfo(self): # method for packet information
-        output = f'{super().moreInfo()}'
+    #method for packet information
+    def moreInfo(self): 
+        output = f'{super().moreInfo()}' #call parent moreInfo method
         #prints TCP flags
-        flags = self.packet[self.packetType].flags
-        flagsDict = {
-            'FIN': (flags & 0x01) != 0,
-            'SYN': (flags & 0x02) != 0,
-            'RST': (flags & 0x04) != 0,
-            'PSH': (flags & 0x08) != 0,
-            'ACK': (flags & 0x10) != 0,
-            'URG': (flags & 0x20) != 0,
+        flags = self.packet[self.packetType].flags #tcp has flags, we extract the binary number that represents the flags
+        flagsDict = { #we add to a dictionary all the flags of tcp
+            'FIN': (flags & 0x01) != 0, #we extract FIN flag with '&' operator with 0x01(0001 in binary)
+            'SYN': (flags & 0x02) != 0, #we extract SYS flag with '&' operator with 0x02(0010 in binary)
+            'RST': (flags & 0x04) != 0, #we extract RST flag with '&' operator with 0x04(0100 in binary)
+            'PSH': (flags & 0x08) != 0, #we extract PSH flag with '&' operator with 0x08(1000 in binary)
+            'ACK': (flags & 0x10) != 0, #we extract ACK flag with '&' operator with 0x10(0001 0000 in binary)
+            'URG': (flags & 0x20) != 0, #we extract URG flag with '&' operator with 0x20(0010 0000 in binary)
         }
 
-        output += f'Sequence Number: {self.packet.seq}\n\n'
-        output += f'Acknowledgment Number: {self.packet.ack}\n\n'
-        output += f'Window Size: {self.packet.window}\n\n'
-        output += 'Flags:\n'
-        temp = ''
-        for flag, value in flagsDict.items():
-            if flag == 'ACK':
-                temp += '\n'
-            temp += f'{flag}: {value}, '
-        output += temp.rstrip(', ')
+        output += f'Sequence Number: {self.packet.seq}\n\n' #add the sequence number to output
+        output += f'Acknowledgment Number: {self.packet.ack}\n\n' #add the acknowledgment number to output
+        output += f'Window Size: {self.packet.window}\n\n' #add window size parameter to output
+        output += 'Flags:\n' #add the flags to output
+        temp = '' #temp string for our use 
+        for flag, value in flagsDict.items(): #iteration over the flags in tcp packet
+            if flag == 'ACK': #if flag is ACK we add new line for clean gui representation
+                temp += '\n' #add new line to temp
+            temp += f'{flag}: {value}, ' #add the current flag with its value
+        output += temp.rstrip(', ') #finally insert the flags to output 
         output += '\n\n'
-        if self.packet[self.packetType].options: # print TCP Options (if available)
-            temp = ''
-            count = 0
-            output += 'TCP Options:\n'
-            for option in self.packet[self.packetType].options:
-                if count == 4 or option[0] == 'SAck':
-                    temp += '\n'
-                temp += f'{option[0]}: {option[1]}, '
-                count += 1
-            output += temp.rstrip(', ')
+        if self.packet[self.packetType].options: #add TCP Options (if available)
+            temp = '' #initializing temp to an empty string
+            count = 0 #counter for tcp options
+            output += 'TCP Options:\n' #insert the tcp options to output
+            for option in self.packet[self.packetType].options: #iteration over the options list
+                if count == 4 or option[0] == 'SAck': #for clean gui representation we add new line if count is 4 or SAck option available
+                    temp += '\n' #add new line
+                temp += f'{option[0]}: {option[1]}, ' #add the options to temp
+                count += 1 #icrease the counter
+            output += temp.rstrip(', ') #strip the output for leading comma
             output += '\n\n'
         return output
 
@@ -178,13 +182,12 @@ class TCP_Packet(Default_Packet):
 
 #--------------------------------------------UDP----------------------------------------------#
 class UDP_Packet(Default_Packet):
- 
     def __init__(self, packet=None, id=None): # ctor 
         super().__init__('UDP', packet, id) # call parent ctor
         if packet.haslayer(UDP): #checks if packet is UDP
-            if IP not in packet:
-                self.name = 'Raw UDP'
-            self.packetType = UDP
+            if IP not in packet: #if true the packet has no ip, means its raw
+                self.name = 'Raw UDP' #update the packet name
+            self.packetType = UDP #add packet type
 
 
 #--------------------------------------------UDP-END----------------------------------------------#
@@ -194,38 +197,40 @@ class ICMP_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
         super().__init__('ICMP', packet, id) # call parent ctor
         if packet.haslayer(ICMP): #checks if packet is icmp
-            if IP not in packet:
-                self.name = 'Raw ICMP'
-            self.packetType = ICMP
+            if IP not in packet: #if true the packet has no ip, means its raw
+                self.name = 'Raw ICMP' #update the packet name
+            self.packetType = ICMP #add packet type
 
+
+    #method for brief packet information
     def info(self):
         output = ''
-        packetSize = len(self.packet)
-        icmpType = self.packet[ICMP].type
-        icmpCode = self.packet[ICMP].code
-        if IP in self.packet:
-            srcIp = self.packet[IP].src
-            dstIp = self.packet[IP].dst
-            output += f'{self.name} Packet: ({srcIp}) --> ({dstIp}) | Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes'
+        packetSize = len(self.packet) #represent the packet size
+        icmpType = self.packet[ICMP].type #represents icmp type
+        icmpCode = self.packet[ICMP].code #represents icmp code
+        if IP in self.packet: #if packet has ip layer
+            srcIp = self.packet[IP].src #represents the source ip
+            dstIp = self.packet[IP].dst #represents the destination ip
+            output += f'{self.name} Packet: ({srcIp}) --> ({dstIp}) | Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes' #add to output the packet info with ip
         else:
-            output += f'{self.name} Packet: Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes'
+            output += f'{self.name} Packet: Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes' #add to output the packet info 
         return output
 
 
-    def moreInfo(self): # method for packet information
+    #method for packet information
+    def moreInfo(self): 
         output = ''
-        if ICMP in self.packet:
-            # insert ICMP specific information
-            icmpType = self.packet[ICMP].type
-            icmpCode = self.packet[ICMP].code
-            icmpSeq = self.packet[ICMP].seq
-            icmpId = self.packet[ICMP].id
-            output += f'{self.name} Packet:\n\n'
-            output += f'Type: {icmpType}\n\n'
-            output += f'Code: {icmpCode}\n\n'
-            output += f'Sequence Number: {icmpSeq}\n\n'
-            output += f'Identifier: {icmpId}\n\n'
-        output += self.ipInfo() #call ip method 
+        if ICMP in self.packet: #if packet has icmp layer
+            icmpType = self.packet[ICMP].type #represents icmp type
+            icmpCode = self.packet[ICMP].code #represents icmp code
+            icmpSeq = self.packet[ICMP].seq #represents icmp sequence number
+            icmpId = self.packet[ICMP].id #represents icmp identifier
+            output += f'{self.name} Packet:\n\n' #add packet name to output
+            output += f'Type: {icmpType}\n\n' #add icmp type to output
+            output += f'Code: {icmpCode}\n\n' #add icmp code to output
+            output += f'Sequence Number: {icmpSeq}\n\n' #add icmp sequence number
+            output += f'Identifier: {icmpId}\n\n' #add icmp identifier
+        output += self.ipInfo() #call ip method for more ip info
         return output
 
 #--------------------------------------------ICMP-END----------------------------------------------#
@@ -233,37 +238,39 @@ class ICMP_Packet(Default_Packet):
 # --------------------------------------------ARP----------------------------------------------#
 class ARP_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
-        super().__init__('ARP', packet, id) # call parent ctor
+        super().__init__('ARP', packet, id) #call parent ctor
         if packet.haslayer(ARP): #checks if packet is arp
-            self.packetType = ARP
+            self.packetType = ARP #add packet type
     
 
+    #method for brief packet information
     def info(self):
         output = ''
-        srcMac = self.packet[ARP].hwsrc
-        srcIp = self.packet[ARP].psrc
-        dstMac = self.packet[ARP].hwdst
-        dstIp = self.packet[ARP].pdst
-        packetSize = len(self.packet)
-        output += f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac}) | Size: {packetSize} bytes'
+        srcMac = self.packet[ARP].hwsrc #represents arp source mac address
+        srcIp = self.packet[ARP].psrc #represents arp source ip address
+        dstMac = self.packet[ARP].hwdst #represents arp destination mac address
+        dstIp = self.packet[ARP].pdst #represents arp destination ip address
+        packetSize = len(self.packet) #represents the packet size 
+        output += f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac}) | Size: {packetSize} bytes' #add the packet info to output
         return output
 
 
-    def moreInfo(self):  # method for ARP packet information
+    #method for packet information
+    def moreInfo(self):
         output = ''
-        if ARP in self.packet:
-            output += f'{self.name} Packet:\n\n'
-            output += f'Source MAC: {self.packet[ARP].hwsrc}\n\n'
-            output += f'Destination MAC: {self.packet[ARP].hwdst}\n\n'
-            output += f'Source IP: {self.packet[ARP].psrc}\n\n'
-            output += f'Destination IP: {self.packet[ARP].pdst}\n\n'
-            output += f'Packet Size: {len(self.packet)} bytes\n\n'
-            output += f'ARP Operation: {"Request" if self.packet[ARP].op == 1 else "Reply"}\n\n'
-            output += f'ARP Hardware Type: {self.packet[ARP].hwtype}\n\n'
-            output += f'ARP Protocol Type: {hex(self.packet[ARP].ptype)}\n\n'
-            output += f'ARP Hardware Length: {self.packet[ARP].hwlen}\n\n'
-            output += f'ARP Protocol Length: {self.packet[ARP].plen}\n\n'
-            output += f'Packet Size: {len(self.packet)} bytes\n\n'
+        if ARP in self.packet: #if packet has layer of arp
+            output += f'{self.name} Packet:\n\n' #add packet name to output
+            output += f'Source MAC: {self.packet[ARP].hwsrc}\n\n' #add arp source mac address
+            output += f'Destination MAC: {self.packet[ARP].hwdst}\n\n' #add arp destination mac address
+            output += f'Source IP: {self.packet[ARP].psrc}\n\n' #add arp source ip address
+            output += f'Destination IP: {self.packet[ARP].pdst}\n\n' #add arp destination ip address
+            output += f'Packet Size: {len(self.packet)} bytes\n\n' #add packet size
+            output += f'ARP Operation: {"Request" if self.packet[ARP].op == 1 else "Reply"}\n\n' #add the arp operation to output
+            output += f'ARP Hardware Type: {self.packet[ARP].hwtype}\n\n' #add the hardware type to output
+            output += f'ARP Protocol Type: {hex(self.packet[ARP].ptype)}\n\n' #add protocol type to output
+            output += f'ARP Hardware Length: {self.packet[ARP].hwlen}\n\n' #add hardware length to output
+            output += f'ARP Protocol Length: {self.packet[ARP].plen}\n\n' #add protocol length to output
+            output += f'Packet Size: {len(self.packet)} bytes\n\n' #add packet size to output
         return output
         
 # --------------------------------------------ARP-END----------------------------------------------#
@@ -271,35 +278,39 @@ class ARP_Packet(Default_Packet):
 # --------------------------------------------STP----------------------------------------------#
 class STP_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
-        super().__init__('STP', packet, id)
-        if packet.haslayer(STP):
-            self.packetType = STP
+        super().__init__('STP', packet, id) #call parent ctor
+        if packet.haslayer(STP): #checks if packet is stp
+            self.packetType = STP #add pacet type
 
+
+     #method for brief packet information
     def info(self):
             output = ''
-            packet_size = len(self.packet)
-            output += f'{self.name} Packet: ({self.packet.src}) --> ({self.packet.dst}) | Size: {packet_size} bytes'
+            packetSize = len(self.packet) #represents the stp packet size
+            output += f'{self.name} Packet: ({self.packet.src}) --> ({self.packet.dst}) | Size: {packetSize} bytes' #add packet info to output
             return output
 
+    
+    #method for packet information
     def moreInfo(self):
         output = ''
-        if STP in self.packet:
-            stpProto = self.packet[STP].proto
-            stpVersion = self.packet[STP].version
-            stpBridgeId = self.packet[STP].bridgeid
-            stpPortId = self.packet[STP].portid
-            stpPathCost = self.packet[STP].pathcost
-            stpAge = self.packet[STP].age
-            output += f'{self.name} Packet:\n\n'
-            output += f'STP Protocol: {stpProto}\n\n'
-            output += f'Version: {stpVersion}\n\n'
-            output += f'Source MAC: {self.packet.src}\n\n'
-            output += f'Destination MAC: {self.packet.dst}\n\n'
-            output += f'Bridge ID: {stpBridgeId}\n\n'
-            output += f'Port ID: {stpPortId}\n\n'
-            output += f'Path Cost: {stpPathCost}\n\n'
-            output += f'Age: {stpAge}\n\n'
-        output += f'Packet Size: {len(self.packet)} bytes\n\n'
+        if STP in self.packet: #if packet is an stp packet
+            stpProto = self.packet[STP].proto #represents stp protocol
+            stpVersion = self.packet[STP].version #represents stp version
+            stpBridgeId = self.packet[STP].bridgeid #represents stp bridge id
+            stpPortId = self.packet[STP].portid #represents stp port id
+            stpPathCost = self.packet[STP].pathcost #represents stp path cost
+            stpAge = self.packet[STP].age #represents stp age
+            output += f'{self.name} Packet:\n\n' #add packet name to output
+            output += f'STP Protocol: {stpProto}\n\n' #add stp protocol to output
+            output += f'Version: {stpVersion}\n\n' #add stp version to output
+            output += f'Source MAC: {self.packet.src}\n\n' #add source mac address to output
+            output += f'Destination MAC: {self.packet.dst}\n\n' #add destination mac address to output
+            output += f'Bridge ID: {stpBridgeId}\n\n' #add bridge id tto output
+            output += f'Port ID: {stpPortId}\n\n' #add port id to output
+            output += f'Path Cost: {stpPathCost}\n\n' #add path cost to output
+            output += f'Age: {stpAge}\n\n' #add stp age to output
+        output += f'Packet Size: {len(self.packet)} bytes\n\n' #add packet size to output
         return output
 
 # --------------------------------------------STP-END----------------------------------------------#
@@ -308,8 +319,8 @@ class STP_Packet(Default_Packet):
 class DNS_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
         super().__init__('DNS', packet, id) # call parent ctor
-        if packet.haslayer(DNS): #checks if packet is ether
-            self.packetType = DNS
+        if packet.haslayer(DNS): #checks if packet is DNS
+            self.packetType = DNS #add packet type
 
 
     def info(self):
@@ -371,15 +382,15 @@ class DNS_Packet(Default_Packet):
 #-----------------------------------------HELPER-FUNCTIONS-----------------------------------------#
 
 def GetAvailableNetworkInterfaces(): # method to print all available network interfaces
-    # Get a list of all available network interfaces
+    #get a list of all available network interfaces
     interfaces = netifaces.interfaces()
-    if interfaces:
+    if interfaces: #if there are interfaces we print them
         print('Available network interfaces:')
-        i = 1
-        for interface in interfaces:
+        i = 1 #counter for the interfaces 
+        for interface in interfaces: #print all availabe interfaces
             print(f'{i}. {interface}')
             i += 1
-    else:
+    else: #else no interfaces were found
         print('No network interfaces found.')
 
 
@@ -392,77 +403,59 @@ def GetNetworkInterface(inter): # method to receive desired interface on demand
     return None
 
 #-----------------------------------------HANDLE-FUNCTIONS-----------------------------------------#
+#method that handles TCP packets
 def handleTCP(packet):
     global packetCounter
-    TCP_Object = TCP_Packet(packet, packetCounter)
-    packetDicitionary[TCP_Object.getId()] = TCP_Object
-    packetCounter += 1
-    #print(TCP_Object.info())
-    #print(f'id: {packetCounter}')
-    return TCP_Object
+    TCP_Object = TCP_Packet(packet, packetCounter) #create a new object for packet
+    packetDicitionary[TCP_Object.getId()] = TCP_Object #insert it to packet dictionary
+    packetCounter += 1 #increase the counter
+    return TCP_Object #finally return the object
 
-
+#method that handles UDP packets
 def handleUDP(packet):
     global packetCounter
-    UDP_Object = UDP_Packet(packet, packetCounter)
-    packetDicitionary[UDP_Object.getId()] = UDP_Object
-    packetCounter += 1
-    #print(UDP_Object.info())
-    #print(f'id: {packetCounter}')
-    return UDP_Object
+    UDP_Object = UDP_Packet(packet, packetCounter) #create a new object for packet
+    packetDicitionary[UDP_Object.getId()] = UDP_Object #insert it to packet dictionary
+    packetCounter += 1 #increase the counter
+    return UDP_Object #finally return the object
 
-
+#method that handles DNS packets
 def handleDNS(packet):
     global packetCounter
-    DNS_Object = DNS_Packet(packet, packetCounter)
-    packetDicitionary[DNS_Object.getId()] = DNS_Object
-    packetCounter += 1
-    #print(Ether_Object.info())
-    #print(f'id: {packetCounter}')
-    return DNS_Object
+    DNS_Object = DNS_Packet(packet, packetCounter) #create a new object for packet
+    packetDicitionary[DNS_Object.getId()] = DNS_Object #insert it to packet dictionary
+    packetCounter += 1 #increase the counter
+    return DNS_Object #finally return the object
 
-
+#method that handles ICMP packets
 def handleICMP(packet):
-    global packetCounter
-    ICMP_Object = ICMP_Packet(packet, packetCounter)
-    packetDicitionary[ICMP_Object.getId()] = ICMP_Object
-    packetCounter += 1
-    #print(ICMP_Object.info())
-    #print(f'id: {packetCounter}')
-    return ICMP_Object
+    global packetCounter 
+    ICMP_Object = ICMP_Packet(packet, packetCounter) #create a new object for packet
+    packetDicitionary[ICMP_Object.getId()] = ICMP_Object #insert it to packet dictionary
+    packetCounter += 1 #increase the counter
+    return ICMP_Object #finally return the object
 
-
+#method that handles ARP packets
 def handleARP(packet):
     global packetCounter
-    ARP_Object = ARP_Packet(packet, packetCounter)
-    packetDicitionary[ARP_Object.getId()] = ARP_Object
-    packetCounter += 1
-    #print(ARP_Object.info())
-    #print(f'id: {packetCounter}')
-    return ARP_Object
+    ARP_Object = ARP_Packet(packet, packetCounter) #create a new object for packet
+    packetDicitionary[ARP_Object.getId()] = ARP_Object #insert it to packet dictionary
+    packetCounter += 1 #increase the counter
+    return ARP_Object #finally return the object
 
-
+#method that handles STP packets
 def handleSTP(packet):
     global packetCounter
-    STP_Object = STP_Packet(packet, packetCounter)
-    packetDicitionary[STP_Object.getId()] = STP_Object
-    packetCounter += 1
-    #print(STP_Object.info())
-    #print(f'id: {packetCounter}')
-    return STP_Object
+    STP_Object = STP_Packet(packet, packetCounter) #create a new object for packet
+    packetDicitionary[STP_Object.getId()] = STP_Object #insert it to packet dictionary
+    packetCounter += 1 #increase the counter
+    return STP_Object #finally return the object
 
 #-----------------------------------------HANDLE-FUNCTIONS-END-----------------------------------------#
 
 packetDicitionary = {} #initialize the packet dictionary
 packetCounter = 0 # global counter for dictionary elements
 stopCapture = False # for ctrl + c operation (stopping capture)
-
-def signalHandler(signal, frame): # handle method for stopping the program
-    global stopCapture
-    print('\nStopping packet capturing...')
-    stopCapture = True
-
-signal.signal(signal.SIGINT, signalHandler) # signal the stopping operation
 
 #-----------------------------------------HELPER-FUNCTIONS-END-----------------------------------------#
 
@@ -472,15 +465,16 @@ class PacketCaptureThread(QThread):
     packetCaptured = pyqtSignal() #signal for the thread to update the main for changes
     interface = None #inerface of network (optional)
     packetQueue = None #packet queue pointer for the thread
-    PortandIp = None
+    packetFilter = None #represents the packet type filter for sniffer
+    PortandIp = None #string that represents port and ip for sniffer to filter with
     stopCapture = False #flag for capture status
 
     def __init__(self, packetQueue, packetFilter, PortandIp, interface=None):
         super(PacketCaptureThread, self).__init__()
         self.interface = interface #initialize the network interface if given
         self.packetQueue = packetQueue #setting the packetQueue from the packet sniffer class
-        self.packetFilter = packetFilter
-        self.PortandIp = PortandIp
+        self.packetFilter = packetFilter #set the packet filter for scapy sniff method
+        self.PortandIp = PortandIp #set the port and ip string for filthering with desired pord and ip
         self.updateTimer = QTimer(self) #initialzie the QTimer
         self.updateTimer.timeout.connect(lambda: self.packetCaptured.emit()) #connect the signal to gui to update the packet list when timer elapses
         self.updateTimer.start(2000) #setting the timer to elapse every 2 seconds (can adjust according to the load)
@@ -488,12 +482,12 @@ class PacketCaptureThread(QThread):
 
     #methdo that handles stopping the scan
     def stop(self):
-        self.stopCapture = True
+        self.stopCapture = True #setting the stop flag to true will stop the loop in sniff
 
 
     #method for sniff method of scapy to know status of flag 
     def checkStopFlag(self, packet):
-        return self.stopCapture 
+        return self.stopCapture #return the stopCapture flag
 
 
     #method that handles the packet capturing
@@ -509,9 +503,9 @@ class PacketCaptureThread(QThread):
 
     #run method for the thread, initialzie the scan, call scapy sniff method with necessary parameters
     def run(self):
-        if self.interface is not None:
+        if self.interface is not None: #if interface is specified we call sniff with desired interface
             sniff(iface=self.interface, prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
-        else:
+        else: #else we initiate the sniff with default network interface
             sniff(prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
 
 #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
@@ -538,6 +532,7 @@ class PacketSniffer(QMainWindow):
         self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
         self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
         self.ClearButton.clicked.connect(self.ClearClicked) #add method to handle clear button 
+        self.SaveScanButton.clicked.connect(self.saveScan) #add method to handle save scan button
         self.PacketList.doubleClicked.connect(self.handleItemDoubleClicked) #add method to handle clicks on the items in packet list
         self.setLineEditValidate() #call the method to set the validators for the QLineEdit for port and ip
         self.IPLineEdit.textChanged.connect(self.checkIPValidity) #connect signal for textChanged for IP to determine its validity
@@ -609,6 +604,28 @@ class PacketSniffer(QMainWindow):
             CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False)
     
     
+    #method for saving scan data into a text file
+    def saveScan(self):
+        #if packet dictionary isn't empty and if there's no scan in progress we open the save window
+        if any(packetDicitionary.values()) and self.packetCaptureThread is None:
+            options = QFileDialog.Options() #this is for file options
+            filePath, _ = QFileDialog.getSaveFileName(self, "Save Scan Data", "", "Text Files (*.txt);;All Files (*)", options=options) #save the file in a specific path
+            if filePath: #if user chose valid path we continue
+                try: 
+                    with open(filePath, 'w') as file: #we open the file for writing
+                        for packet in packetDicitionary.values(): #iterating over the packet dictionary to extract the info 
+                            file.write('------------------------------------------------------------------------------------\n\n')
+                            file.write(packet.moreInfo()) #write the packet info to the file (extended information)
+                            file.write('------------------------------------------------------------------------------------\n\n')
+                        CustomMessageBox('Scan Saved', 'Saved scan detalis to text file.', 'Information', False) #notify the user for success
+                except Exception as e: #if error happend we print the error to terminal
+                    print(f"Error occurred while saving: {e}")
+        elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #if scan in progress we notify the user
+            CustomMessageBox('Scan In Progress', 'Cannot save scan while in progress!', 'Information', False)
+        else: #else we show a "saved denied" error if something happend
+            CustomMessageBox('Save Denied', 'No scan data to save.', 'Information', False)
+
+
     def ClearClicked(self):
         global packetDicitionary #declare global parameter for clearing packet dictionary
         global packetCounter #declare global parameter for resetting the packet counter
