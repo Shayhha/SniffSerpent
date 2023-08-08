@@ -695,10 +695,12 @@ class PacketSniffer(QMainWindow):
 
     #method for updating the packet list
     def updatePacketList(self):
-        if self.packetCaptureThread != None and self.packetQueue.qsize() >=20: #we add packets when queue has at least 20 waiting
-            while not self.packetQueue.empty(): #add the packets to packet list while queue not empty
+        buffer = min(self.packetQueue.qsize(), 100) #buffer for the amount of packets to add at a time, min betweenn queue size and 100 packets
+        if self.packetCaptureThread != None and not self.packetQueue.empty(): #we add packets when queue if not empty 
+            while buffer > 0: #add the packets to packet list while buffer isn't empty 
                 packetInfo = self.packetQueue.get() #taking a packet from the queue
                 self.packetModel.appendRow(QStandardItem(packetInfo)) #adding to packet list in GUI
+                buffer -= 1 #subtracting from buffer
 
 
     #method the double clicks in packet list, extended information section
