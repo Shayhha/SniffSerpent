@@ -283,7 +283,7 @@ class STP_Packet(Default_Packet):
             self.packetType = STP #add pacet type
 
 
-     #method for brief packet information
+    #method for brief packet information
     def info(self):
             output = ''
             packetSize = len(self.packet) #represents the stp packet size
@@ -323,59 +323,61 @@ class DNS_Packet(Default_Packet):
             self.packetType = DNS #add packet type
 
 
+    #method for brief packet information
     def info(self):
-        output ='' # output string for information of packet
-        dnsPacket = self.packet[DNS]
-        srcMac = self.packet.src
-        dstMac = self.packet.dst
-        srcPort = ''
-        dstPort =''
-        packetSize = len(self.packet)
+        output ='' #output string for information of packet
+        dnsPacket = self.packet[DNS] #parameter for dns packet
+        srcMac = self.packet.src #representst the source mac address
+        dstMac = self.packet.dst #represents the destination mac address
+        srcIp = '' #represents the source ip address
+        dstIp = '' #represents the destination ip address
+        srcPort = '' #represents the source port
+        dstPort ='' #represents the destination port
+        packetSize = len(self.packet) #represenets the packet size
 
-        if self.packet.haslayer(IP):
-            srcIp = self.packet[IP].src
-            dstIp = self.packet[IP].dst
-        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP):
-            srcPort = self.packet.sport
-            dstPort = self.packet.dport
+        if self.packet.haslayer(IP): #if true packet has ip layer
+            srcIp = self.packet[IP].src #set the source ip
+            dstIp = self.packet[IP].dst #set the destination ip
+        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP): #if dns packet transmitted through tcp or udp it has port 
+            srcPort = self.packet.sport #set the source port
+            dstPort = self.packet.dport #set the destination port
 
-        if (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and self.packet.haslayer(IP):
-            output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})'
-        elif (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and not self.packet.haslayer(IP):
-            output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})'
-        elif self.packet.haslayer(IP):
-            f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac})'
-        elif not self.packet.haslayer(IP):
-            f'{self.name} Packet: ({srcMac}) --> ({dstMac})'
+        if (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and self.packet.haslayer(IP): #if it's transmitted through tcp or udp with ip
+            output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #add the info with ip to output
+        elif (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and not self.packet.haslayer(IP): #if its transmitted through tcp or udp without ip
+            output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #add the info without ip to output
+        elif self.packet.haslayer(IP): # if there's only ip layer
+            f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac})' #add the info to output
+        elif not self.packet.haslayer(IP): #else it wasn't transmitted through tcp or udp and it doesn't have ip
+            f'{self.name} Packet: ({srcMac}) --> ({dstMac})' #add the info to output
 
-        output += f' Type: {"Response" if dnsPacket.qr else "Request"}'
-        output += f' | Size: {packetSize} bytes'
+        output += f' Type: {"Response" if dnsPacket.qr else "Request"}' #add the dns type, response or request
+        output += f' | Size: {packetSize} bytes' #add the size of the packet
         return output
 
 
+    #method for packet information
     def moreInfo(self):
-        output = super().moreInfo()
-        if self.packet and DNS in self.packet:
-            dnsPacket = self.packet[DNS]
-            #output += f'DNS Packet:\n\n'
+        output = super().moreInfo() #call parent moreInfo method
+        if self.packet and DNS in self.packet: #if packet has DNS layer
+            dnsPacket = self.packet[DNS] #save the dns packet in parameter
             output += f'ID: {dnsPacket.id}\n\n' #id of the dns packet
             if dnsPacket.qr == 1: #means its a response packet
-                if dnsPacket.an: 
-                # Extract and display information from the answers section if present
-                    output += f'Type: Response\n\n' #specifing its type
-                    output += self.fitStr('Response Name:', dnsPacket.an.rrname)
-                    output += f'Response Type: {dnsPacket.an.type}, '
-                    output += f'Response Class: {dnsPacket.an.rclass}\n\n'
-                    output += f'Num Responses: {len(dnsPacket.an)}\n\n'
+                if dnsPacket.an: #if dns packet is response packet
+                    output += f'Type: Response\n\n' #add type of packet to output
+                    output += self.fitStr('Response Name:', dnsPacket.an.rrname) #add repsonse name to output
+                    output += f'Response Type: {dnsPacket.an.type}, ' #add response type to output
+                    output += f'Response Class: {dnsPacket.an.rclass}\n\n' #add response class to output
+                    output += f'Num Responses: {len(dnsPacket.an)}\n\n' #add number of responses to output
                     if hasattr(dnsPacket.an, 'rdata'): #check if rdata attribute exists
                         output += self.fitStr('Response Data:', dnsPacket.an.rdata) #specify the rdata parameter
             else: #means its a request packet
                 if dnsPacket.qd:
-                    output += f'Type: Request\n\n' #specifing its type
-                    output += self.fitStr('Request Name:', dnsPacket.qd.qname)
-                    output += f'Request Type: {dnsPacket.qd.qtype}, '
-                    output += f'Request Class: {dnsPacket.qd.qclass}\n\n'
-                    output += f'Num Requests: {len(dnsPacket.qd)}\n\n'
+                    output += f'Type: Request\n\n' #add type of packet to output
+                    output += self.fitStr('Request Name:', dnsPacket.qd.qname) #add request name to output
+                    output += f'Request Type: {dnsPacket.qd.qtype}, ' #add request type to output
+                    output += f'Request Class: {dnsPacket.qd.qclass}\n\n' #add request class to output
+                    output += f'Num Requests: {len(dnsPacket.qd)}\n\n' #add num of requests to output
         return output
 # --------------------------------------------DNS-END----------------------------------------------#
 
@@ -609,7 +611,7 @@ class PacketSniffer(QMainWindow):
         #if packet dictionary isn't empty and if there's no scan in progress we open the save window
         if any(packetDicitionary.values()) and self.packetCaptureThread is None:
             options = QFileDialog.Options() #this is for file options
-            filePath, _ = QFileDialog.getSaveFileName(self, "Save Scan Data", "", "Text Files (*.txt);;All Files (*)", options=options) #save the file in a specific path
+            filePath, _ = QFileDialog.getSaveFileName(self, 'Save Scan Data', 'Packet Scan', 'Text Files (*.txt);;All Files (*)', options=options) #save the file in a specific path
             if filePath: #if user chose valid path we continue
                 try: 
                     with open(filePath, 'w') as file: #we open the file for writing
@@ -789,4 +791,6 @@ if __name__ == '__main__':
     #----------------APP----------------#
     #GetAvailableNetworkInterfaces()
     #InitSniff()
+
+#-----------------------------------------------------------MAIN-END------------------------------------------------------------#
 
