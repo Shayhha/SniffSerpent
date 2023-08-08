@@ -592,7 +592,7 @@ class PacketSniffer(QMainWindow):
             self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP) #initialzie the packet thread with the queue we initialized
             self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
             self.packetCaptureThread.start() #calling the run method of the thread to start the scan
-            print('Start Scan button clicked')
+            self.StartScanButton.setEnabled(False) #set the scan button to be unclickable while scan in progress
         else: #else we show error message
             CustomMessageBox('Scan Running', 'Scan is already running!', 'Information', False)
 
@@ -603,6 +603,7 @@ class PacketSniffer(QMainWindow):
             self.packetCaptureThread.stop() #calls stop method of the thread 
             self.packetCaptureThread.exit() #kills the thread 
             self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan 
+            self.StartScanButton.setEnabled(True) #set scan button back to being clickable
             CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False)
     
     
