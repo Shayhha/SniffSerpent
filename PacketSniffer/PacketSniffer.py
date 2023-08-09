@@ -412,7 +412,6 @@ class HTTP_Packet(Default_Packet):
                     if isinstance(fieldValue, bytes):
                         fieldValue = fieldValue.decode()
                     headers[fieldName] = fieldValue
-                print(f"Headers: {headers}\n\n")
 
             if self.packet.haslayer(HTTPResponse): #if the packet is response
                 httpVersion = headers.get('Http_Version') #get the http version of packet
