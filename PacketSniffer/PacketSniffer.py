@@ -54,15 +54,18 @@ class Default_Packet(ABC): #abstarct class for default packet
     #method that handles a long string and makes it fit in the GUI 
     def fitStr(self, st, info): 
         output = ''
-        if isinstance(info, bytes): #if given info is byte we convert it to utf-8 string
-            info = info.decode('utf-8', errors='replace') #decode the byte to string
-        if len(info) >= 46: #if the string is longer then specified length we add a new line
-            temp = '\n'.join(info[i:i+46] for i in range(0, len(info), 46)) #iterating over the string and adding new line after specified amount of characters
-            output += f'{st}\n{temp}\n\n' #insert to the output 
-        elif len(f'{st}: {info}') >=46: #if the info string and st string togther exceed the specified characters we add new line
-            output += f'{st}\n{info}\n\n' #insert to the output
-        else: #else info and st strings are not exceeding the specifed amount of characters
-            output += f'{st} {info}\n\n' #we add the original info and st strings to the output without a new line
+        if info is not None: #if info not none we continue
+            if isinstance(info, bytes): #if given info is byte we convert it to utf-8 string
+                info = info.decode('utf-8', errors='replace') #decode the byte to string
+            if len(info) >= 46: #if the string is longer then specified length we add a new line
+                temp = '\n'.join(info[i:i+46] for i in range(0, len(info), 46)) #iterating over the string and adding new line after specified amount of characters
+                output += f'{st}\n{temp}\n\n' #insert to the output 
+            elif len(f'{st}: {info}') >=46: #if the info string and st string togther exceed the specified characters we add new line
+                output += f'{st}\n{info}\n\n' #insert to the output
+            else: #else info and st strings are not exceeding the specifed amount of characters
+                output += f'{st} {info}\n\n' #we add the original info and st strings to the output without a new line
+        else: #else info is none
+            output += f'{st} {info}\n\n' #add to output the value with none value 
         return output
 
 
@@ -108,6 +111,8 @@ class Default_Packet(ABC): #abstarct class for default packet
             output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #insert info to output
         elif not self.packet.haslayer(IP): #else no ip layer 
             output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #insert info without ip to output
+        if self.packet.haslayer(HTTP) and (self.packet.haslayer(HTTPResponse) or self.packet.haslayer(HTTPRequest)):
+            output += f' Type: {"Response" if self.packet.haslayer(HTTPResponse) else "Request"}' #add http type, response or request
         output += f' | Size: {packetSize} bytes' #insert packet size to output
         return output
 
@@ -699,7 +704,7 @@ class PacketSniffer(QMainWindow):
             packetCounter = 0 #reset the packet counter
             self.packetQueue = Queue() #clear the queue if there're packets in
             self.PacketList.model().clear() #clear the packet list in GUI
-            self.MoreInfoLable.setText('') #clear the extended information in GUI
+            self.MoreInfoTextEdit.setText('') #clear the extended information in GUI
         elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning():
             CustomMessageBox('Thread Running Error', 'Cannot clear while scan is in progress!', 'Warning', False)
         
@@ -775,7 +780,7 @@ class PacketSniffer(QMainWindow):
         item = self.PacketList.model().itemFromIndex(index) #taking the packet from the list in GUI
         if item is not None and packetIndex in packetDicitionary: #checking if the packet in GUI list isn't None 
             p = packetDicitionary[packetIndex] #taking the matching packet from the packetDictionary
-            self.MoreInfoLable.setText(p.moreInfo()) #add the information to the extended information section in GUI
+            self.MoreInfoTextEdit.setText(p.moreInfo()) #add the information to the extended information section in GUI
 
 #---------------------------------------------------Application-END----------------------------------------------------#
 
