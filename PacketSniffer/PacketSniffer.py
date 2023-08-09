@@ -2,10 +2,9 @@ import sys
 import signal
 from abc import ABC, abstractmethod
 import scapy.all as scapy
-from scapy.all import sniff, IP, IPv6, TCP, UDP, ICMP, ARP
+from scapy.all import sniff, IP, IPv6, TCP, UDP, ICMP, ARP, Raw
 from scapy.layers.l2 import STP
 from scapy.layers.dns import DNS
-from scapy.all import Raw
 import netifaces
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import pyqtSignal, Qt, QThread, QTimer, QSize, QRegExp
