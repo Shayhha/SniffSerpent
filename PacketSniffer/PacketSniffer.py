@@ -5,6 +5,7 @@ import scapy.all as scapy
 from scapy.all import sniff, IP, IPv6, TCP, UDP, ICMP, ARP, Raw
 from scapy.layers.l2 import STP
 from scapy.layers.dns import DNS
+from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 import netifaces
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import pyqtSignal, Qt, QThread, QTimer, QSize, QRegExp
@@ -380,6 +381,60 @@ class DNS_Packet(Default_Packet):
         return output
 # --------------------------------------------DNS-END----------------------------------------------#
 
+# -----------------------------------------------HTTP------------------------------------------------#
+class HTTP_Packet(Default_Packet):
+    def __init__(self, packet=None, id=None):
+        super().__init__('HTTP', packet, id) # call parent ctor
+        if packet.haslayer(HTTP): #checks if packet is HTTP
+            self.packetType = HTTP #add packet type
+
+
+    #method for packet information
+    def moreInfo(self):
+        output = super().moreInfo() #call parent moreInfo method
+        if self.packet and HTTP in self.packet: #if packet has HTTP layer
+            httpPacket = self.packet[HTTP] #set the http packet
+            headers = {} #set headers to be an empty dictionary
+            if self.packet.haslayer(HTTPResponse): #if packet is http response
+                httpPacket = self.packet[HTTPResponse] #set the packet as http response
+            elif self.packet.haslayer(HTTPRequest): #if packet is http request
+                httpPacket = self.packet[HTTPRequest] #set the packet as http request
+            
+            if httpPacket.haslayer(HTTPResponse) or httpPacket.haslayer(HTTPRequest):
+                for field in httpPacket.fields_desc: #
+                    fieldName = field.name
+                    fieldValue = getattr(httpPacket, fieldName)
+                    if isinstance(fieldValue, bytes):
+                        fieldValue = fieldValue.decode()
+                    headers[fieldName] = fieldValue
+                print(f"Headers: {headers}\n\n")
+
+            if self.packet.haslayer(HTTPResponse): #if the packet is response
+                httpVersion = headers.get('Http_Version') #get the http version of packet
+                statusCode = httpPacket.Status_Code.decode() #get the status code of response packet
+                contentLength = headers.get('Content_Length') #get the content length of response packet
+                server = headers.get('Server') #get the server of response packet
+                output += f'Type: Response\n\n' #add type of packet to output
+                output += f'HTTP Version: {httpVersion}\n\n' #add http version to output
+                output += f'Status Code: {statusCode}\n\n' #add status code to output
+                output += f'Content Length: {contentLength}\n\n' #add content length to output
+                output += self.fitStr('Server:', server) #add server of packet to output
+
+            elif self.packet.haslayer(HTTPRequest): #if the packet is request
+                httpVersion = headers.get('Http_Version') #get the http version of packet
+                method = httpPacket.Method.decode() #get the method name of request packet
+                url = httpPacket.Host.decode() + httpPacket.Path.decode() #get the url of the request packet
+                accept = headers.get('Accept') #get the accept info of request
+                referer = headers.get('Referer') #get the referer of request
+                output += f'Type: Request\n\n' #add type of packet to output
+                output += f'HTTP Version: {httpVersion}\n\n' #add http version to output
+                output += f'Method: {method}\n\n' #add method to output
+                output += self.fitStr('URL:', url) #add url to output
+                output += self.fitStr('Accept:', accept) #add accept to output
+                output += self.fitStr('Referer:', referer) #add referer to output
+        return output
+# -----------------------------------------------HTTP-END------------------------------------------------#
+
 #-----------------------------------------HELPER-FUNCTIONS-----------------------------------------#
 
 def GetAvailableNetworkInterfaces(): # method to print all available network interfaces
@@ -427,6 +482,14 @@ def handleDNS(packet):
     packetDicitionary[DNS_Object.getId()] = DNS_Object #insert it to packet dictionary
     packetCounter += 1 #increase the counter
     return DNS_Object #finally return the object
+
+#method that handles HTTP packets
+def handleHTTP(packet):
+    global packetCounter
+    HTTP_Object = HTTP_Packet(packet, packetCounter) #create a new object for packet
+    packetDicitionary[HTTP_Object.getId()] = HTTP_Object #insert it to packet dictionary
+    packetCounter += 1 #increase the counter
+    return HTTP_Object #finally return the object
 
 #method that handles ICMP packets
 def handleICMP(packet):
@@ -645,12 +708,14 @@ class PacketSniffer(QMainWindow):
     def packetFilter(self):
         #check each check box to filter the packet kinds
         packetFilter = ''
+        if not self.HTTPCheckBox.isChecked():
+            packetFilter += 'HTTP,'
         if not self.TCPCheckBox.isChecked():
             packetFilter += 'TCP,'
-        if not self.UDPCheckBox.isChecked():
-            packetFilter += 'UDP,'
         if not self.DNSCheckBox.isChecked():
             packetFilter += 'DNS,'
+        if not self.UDPCheckBox.isChecked():
+            packetFilter += 'UDP,'
         if not self.ICMPCheckBox.isChecked():
             packetFilter += 'ICMP,'
         if not self.ARPCheckBox.isChecked():
@@ -659,6 +724,7 @@ class PacketSniffer(QMainWindow):
             packetFilter += 'STP,'
         #dicionary for packet kinds and their methods for handling:
         captureDictionary = {
+        HTTP: handleHTTP,
         TCP: handleTCP,
         DNS: handleDNS,
         UDP: handleUDP,
