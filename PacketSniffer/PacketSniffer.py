@@ -405,13 +405,13 @@ class HTTP_Packet(Default_Packet):
             elif self.packet.haslayer(HTTPRequest): #if packet is http request
                 httpPacket = self.packet[HTTPRequest] #set the packet as http request
             
-            if httpPacket.haslayer(HTTPResponse) or httpPacket.haslayer(HTTPRequest):
-                for field in httpPacket.fields_desc: #
-                    fieldName = field.name
-                    fieldValue = getattr(httpPacket, fieldName)
-                    if isinstance(fieldValue, bytes):
-                        fieldValue = fieldValue.decode()
-                    headers[fieldName] = fieldValue
+            if httpPacket.haslayer(HTTPResponse) or httpPacket.haslayer(HTTPRequest): #if http packets is response or request
+                for field in httpPacket.fields_desc: #iterating over fields desc list to retrive the headers dictionary
+                    fieldName = field.name #field name of packet
+                    fieldValue = getattr(httpPacket, fieldName) #field value of packet
+                    if isinstance(fieldValue, bytes): #if field value is byte we decode it
+                        fieldValue = fieldValue.decode() #decode field name byte
+                    headers[fieldName] = fieldValue #finally we add field value to headers dictionary
 
             if self.packet.haslayer(HTTPResponse): #if the packet is response
                 httpVersion = headers.get('Http_Version') #get the http version of packet
