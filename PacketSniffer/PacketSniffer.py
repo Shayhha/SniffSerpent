@@ -467,7 +467,7 @@ def GetNetworkInterface(inter): # method to receive desired interface on demand
 def handleTCP(packet):
     global packetCounter
     TCP_Object = TCP_Packet(packet, packetCounter) #create a new object for packet
-    packetDicitionary[TCP_Object.getId()] = TCP_Object #insert it to packet dictionary
+    packetDictionary[TCP_Object.getId()] = TCP_Object #insert it to packet dictionary
     packetCounter += 1 #increase the counter
     return TCP_Object #finally return the object
 
@@ -475,7 +475,7 @@ def handleTCP(packet):
 def handleUDP(packet):
     global packetCounter
     UDP_Object = UDP_Packet(packet, packetCounter) #create a new object for packet
-    packetDicitionary[UDP_Object.getId()] = UDP_Object #insert it to packet dictionary
+    packetDictionary[UDP_Object.getId()] = UDP_Object #insert it to packet dictionary
     packetCounter += 1 #increase the counter
     return UDP_Object #finally return the object
 
@@ -483,7 +483,7 @@ def handleUDP(packet):
 def handleDNS(packet):
     global packetCounter
     DNS_Object = DNS_Packet(packet, packetCounter) #create a new object for packet
-    packetDicitionary[DNS_Object.getId()] = DNS_Object #insert it to packet dictionary
+    packetDictionary[DNS_Object.getId()] = DNS_Object #insert it to packet dictionary
     packetCounter += 1 #increase the counter
     return DNS_Object #finally return the object
 
@@ -491,7 +491,7 @@ def handleDNS(packet):
 def handleHTTP(packet):
     global packetCounter
     HTTP_Object = HTTP_Packet(packet, packetCounter) #create a new object for packet
-    packetDicitionary[HTTP_Object.getId()] = HTTP_Object #insert it to packet dictionary
+    packetDictionary[HTTP_Object.getId()] = HTTP_Object #insert it to packet dictionary
     packetCounter += 1 #increase the counter
     return HTTP_Object #finally return the object
 
@@ -499,7 +499,7 @@ def handleHTTP(packet):
 def handleICMP(packet):
     global packetCounter 
     ICMP_Object = ICMP_Packet(packet, packetCounter) #create a new object for packet
-    packetDicitionary[ICMP_Object.getId()] = ICMP_Object #insert it to packet dictionary
+    packetDictionary[ICMP_Object.getId()] = ICMP_Object #insert it to packet dictionary
     packetCounter += 1 #increase the counter
     return ICMP_Object #finally return the object
 
@@ -507,7 +507,7 @@ def handleICMP(packet):
 def handleARP(packet):
     global packetCounter
     ARP_Object = ARP_Packet(packet, packetCounter) #create a new object for packet
-    packetDicitionary[ARP_Object.getId()] = ARP_Object #insert it to packet dictionary
+    packetDictionary[ARP_Object.getId()] = ARP_Object #insert it to packet dictionary
     packetCounter += 1 #increase the counter
     return ARP_Object #finally return the object
 
@@ -515,13 +515,13 @@ def handleARP(packet):
 def handleSTP(packet):
     global packetCounter
     STP_Object = STP_Packet(packet, packetCounter) #create a new object for packet
-    packetDicitionary[STP_Object.getId()] = STP_Object #insert it to packet dictionary
+    packetDictionary[STP_Object.getId()] = STP_Object #insert it to packet dictionary
     packetCounter += 1 #increase the counter
     return STP_Object #finally return the object
 
 #-----------------------------------------HANDLE-FUNCTIONS-END-----------------------------------------#
 
-packetDicitionary = {} #initialize the packet dictionary
+packetDictionary = {} #initialize the packet dictionary
 packetCounter = 0 # global counter for dictionary elements
 stopCapture = False # for ctrl + c operation (stopping capture)
 
@@ -676,13 +676,13 @@ class PacketSniffer(QMainWindow):
     #method for saving scan data into a text file
     def saveScan(self):
         #if packet dictionary isn't empty and if there's no scan in progress we open the save window
-        if any(packetDicitionary.values()) and self.packetCaptureThread is None:
+        if any(packetDictionary.values()) and self.packetCaptureThread is None:
             options = QFileDialog.Options() #this is for file options
             filePath, _ = QFileDialog.getSaveFileName(self, 'Save Scan Data', 'Packet Scan', 'Text Files (*.txt);;All Files (*)', options=options) #save the file in a specific path
             if filePath: #if user chose valid path we continue
                 try: 
                     with open(filePath, 'w') as file: #we open the file for writing
-                        for packet in packetDicitionary.values(): #iterating over the packet dictionary to extract the info 
+                        for packet in packetDictionary.values(): #iterating over the packet dictionary to extract the info 
                             file.write('------------------------------------------------------------------------------------\n\n')
                             file.write(packet.moreInfo()) #write the packet info to the file (extended information)
                             file.write('------------------------------------------------------------------------------------\n\n')
@@ -696,10 +696,10 @@ class PacketSniffer(QMainWindow):
 
 
     def ClearClicked(self):
-        global packetDicitionary #declare global parameter for clearing packet dictionary
+        global packetDictionary #declare global parameter for clearing packet dictionary
         global packetCounter #declare global parameter for resetting the packet counter
         if self.packetCaptureThread is None or (self.packetCaptureThread is not None and not self.packetCaptureThread.isRunning()):
-            packetDicitionary.clear() #clear the main packet dictionary
+            packetDictionary.clear() #clear the main packet dictionary
             packetCounter = 0 #reset the packet counter
             self.packetQueue = Queue() #clear the queue if there're packets in
             self.PacketList.model().clear() #clear the packet list in GUI
@@ -777,8 +777,8 @@ class PacketSniffer(QMainWindow):
     def handleItemDoubleClicked(self, index):
         packetIndex = index.row() #get the index of the row of the specific packet we want
         item = self.PacketList.model().itemFromIndex(index) #taking the packet from the list in GUI
-        if item is not None and packetIndex in packetDicitionary: #checking if the packet in GUI list isn't None 
-            p = packetDicitionary[packetIndex] #taking the matching packet from the packetDictionary
+        if item is not None and packetIndex in packetDictionary: #checking if the packet in GUI list isn't None 
+            p = packetDictionary[packetIndex] #taking the matching packet from the packetDictionary
             self.MoreInfoTextEdit.setText(p.moreInfo()) #add the information to the extended information section in GUI
 
 #---------------------------------------------------Application-END----------------------------------------------------#
