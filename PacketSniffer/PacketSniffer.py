@@ -798,7 +798,7 @@ class CustomMessageBox(QDialog):
         horizontalLayout = QHBoxLayout() #create new horizontal layout
         textLabel = QLabel(text) #creat a text lable 
         textLabel.setAlignment(Qt.AlignCenter)  #set text alignment to center
-        textLabel.setStyleSheet("font-size: 18px;") #set font size of text
+        textLabel.setStyleSheet("font-size: 18px; font-family: Arial;") #set font size of text
         textLabel.setWordWrap(self.wordWrap) #set a wordWrap for better text representation
 
         if icon != 'NoIcon': #if true it means we need to set an icon for message box
@@ -833,7 +833,8 @@ class CustomMessageBox(QDialog):
                 border: 2px solid black;
                 border-radius: 15px;
                 padding: 4px;
-                font-size: 15px; 
+                font-size: 17px; 
+                font-family: Arial; 
                 min-width: 60px;  
                 min-height: 20px;
             }

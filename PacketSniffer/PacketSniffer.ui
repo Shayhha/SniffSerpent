@@ -27,7 +27,7 @@
   </property>
   <property name="styleSheet">
    <string notr="true">QWidget {
-	background-color: qlineargradient(spread:pad, x1:0.522364, y1:0.136, x2:0.522, y2:1, stop:0 rgba(113, 178, 236, 255), stop:1 rgba(210, 236, 246, 255));
+	background-color: qlineargradient(spread:pad, x1:0.522364, y1:0.136, x2:0.522, y2:1, stop:0 rgba(26,112,190, 255), stop:1 rgba(181,212,240, 255));
 }
 
 QScrollBar:vertical {
@@ -78,6 +78,7 @@ QScrollBar:vertical {
     </property>
     <property name="font">
      <font>
+      <family>Segoe UI</family>
       <pointsize>14</pointsize>
      </font>
     </property>
@@ -85,7 +86,7 @@ QScrollBar:vertical {
      <cursorShape>ArrowCursor</cursorShape>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgba(247, 247, 247,150);
+     <string notr="true">background-color: rgba(247, 247, 247,130);
 border-radius: 15px;
 border-style: outset;
 border-width: 2px;
@@ -117,7 +118,7 @@ padding: 4px;</string>
     </property>
     <property name="styleSheet">
      <string notr="true">#Frame {
-	background-color:rgba(219, 228, 255,160);
+	background-color:rgba(219, 228, 255,100);
 	border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -138,7 +139,7 @@ padding: 4px;</string>
     <property name="frameShadow">
      <enum>QFrame::Raised</enum>
     </property>
-    <widget class="QLabel" name="FiltherLable">
+    <widget class="QLabel" name="FiltherLabel">
      <property name="geometry">
       <rect>
        <x>360</x>
@@ -161,6 +162,7 @@ padding: 4px;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>16</pointsize>
       </font>
      </property>
@@ -189,6 +191,7 @@ border: none;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -222,6 +225,7 @@ border: none;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -255,6 +259,7 @@ border: none;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -288,6 +293,7 @@ border: none;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -321,6 +327,7 @@ border: none;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -357,6 +364,7 @@ border: none;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -396,6 +404,7 @@ border: none;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -454,6 +463,7 @@ QPushButton:pressed {
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -512,6 +522,7 @@ QPushButton:pressed {
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -570,6 +581,7 @@ QPushButton:pressed {
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -628,6 +640,7 @@ QPushButton:pressed {
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>12</pointsize>
        <weight>75</weight>
        <bold>true</bold>
@@ -652,7 +665,7 @@ padding: 4px;</string>
       <enum>QLineEdit::Normal</enum>
      </property>
     </widget>
-    <widget class="QLabel" name="PortLable">
+    <widget class="QLabel" name="PortLabel">
      <property name="geometry">
       <rect>
        <x>550</x>
@@ -675,6 +688,7 @@ padding: 4px;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>16</pointsize>
       </font>
      </property>
@@ -715,6 +729,7 @@ border: none;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>12</pointsize>
        <weight>75</weight>
        <bold>true</bold>
@@ -730,7 +745,7 @@ border-color: black;
 padding: 4px;</string>
      </property>
     </widget>
-    <widget class="QLabel" name="IPLable">
+    <widget class="QLabel" name="IPLabel">
      <property name="geometry">
       <rect>
        <x>320</x>
@@ -753,6 +768,7 @@ padding: 4px;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>16</pointsize>
       </font>
      </property>
@@ -784,6 +800,7 @@ border: none;</string>
      </property>
      <property name="font">
       <font>
+       <family>Arial</family>
        <pointsize>14</pointsize>
       </font>
      </property>
@@ -801,7 +818,7 @@ border: none;</string>
      </property>
     </widget>
    </widget>
-   <widget class="QLabel" name="ExtendedInformationLable">
+   <widget class="QLabel" name="ExtendedInformationLabel">
     <property name="geometry">
      <rect>
       <x>1050</x>
@@ -824,6 +841,7 @@ border: none;</string>
     </property>
     <property name="font">
      <font>
+      <family>Arial</family>
       <pointsize>20</pointsize>
      </font>
     </property>
@@ -834,7 +852,7 @@ border: none;</string>
      <string>Extended Information</string>
     </property>
    </widget>
-   <widget class="QLabel" name="ScanResultsLable">
+   <widget class="QLabel" name="ScanResultsLabel">
     <property name="geometry">
      <rect>
       <x>20</x>
@@ -857,7 +875,7 @@ border: none;</string>
     </property>
     <property name="font">
      <font>
-      <family>MS Shell Dlg 2</family>
+      <family>Arial</family>
       <pointsize>20</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -893,6 +911,7 @@ border: none;</string>
     </property>
     <property name="font">
      <font>
+      <family>Arial</family>
       <pointsize>15</pointsize>
      </font>
     </property>
@@ -909,7 +928,7 @@ border: none;</string>
      <bool>false</bool>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgba(247, 247, 247, 150);
+     <string notr="true">background-color: rgba(247, 247, 247, 130);
 border-radius: 15px;
 border-style: outset;
 border-width: 2px;
