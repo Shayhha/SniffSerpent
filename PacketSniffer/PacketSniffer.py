@@ -523,7 +523,6 @@ def handleSTP(packet):
 
 packetDictionary = {} #initialize the packet dictionary
 packetCounter = 0 # global counter for dictionary elements
-stopCapture = False # for ctrl + c operation (stopping capture)
 
 #-----------------------------------------HELPER-FUNCTIONS-END-----------------------------------------#
 
@@ -862,7 +861,6 @@ if __name__ == '__main__':
         print('Exiting')
     #----------------APP----------------#
     #GetAvailableNetworkInterfaces()
-    #InitSniff()
 
 #-----------------------------------------------------------MAIN-END------------------------------------------------------------#
 
