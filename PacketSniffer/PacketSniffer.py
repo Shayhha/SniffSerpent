@@ -797,7 +797,10 @@ class PacketSniffer(QMainWindow):
             packetFilter.rstrip(',').split(',') #splite the original string to get a list of the packet types
             temp = captureDictionary.copy() #save the original dictionary in temp var
             for packetType, handler in temp.items(): #iterating on the dictionary to remove the filtered packets
-                p = str(packetType).split('.')[3].rstrip("'>") #strip the str representation of the packet for extracting its name
+                if packetType == TLS:
+                    p = str(packetType).split('.')[4].rstrip("'>")
+                else:
+                    p = str(packetType).split('.')[3].rstrip("'>") #strip the str representation of the packet for extracting its name
                 if p in packetFilter: #if true we need to delete the packet type from the dictionary
                     del captureDictionary[packetType] #delete packet from dictionary
         if not captureDictionary: #if dictionary is empty we raise a new exception to indicate of an error 
