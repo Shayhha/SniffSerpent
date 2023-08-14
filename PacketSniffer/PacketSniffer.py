@@ -797,9 +797,9 @@ class PacketSniffer(QMainWindow):
             packetFilter.rstrip(',').split(',') #splite the original string to get a list of the packet types
             temp = captureDictionary.copy() #save the original dictionary in temp var
             for packetType, handler in temp.items(): #iterating on the dictionary to remove the filtered packets
-                if packetType == TLS:
-                    p = str(packetType).split('.')[4].rstrip("'>")
-                else:
+                if packetType == TLS: #if true we need to strip a TLS packet string
+                    p = str(packetType).split('.')[4].rstrip("'>") #strip the str representation of the TLS packet for extracting its name
+                else: #else its a regular packet so we strip it 
                     p = str(packetType).split('.')[3].rstrip("'>") #strip the str representation of the packet for extracting its name
                 if p in packetFilter: #if true we need to delete the packet type from the dictionary
                     del captureDictionary[packetType] #delete packet from dictionary
@@ -885,7 +885,7 @@ class CustomMessageBox(QDialog):
         horizontalLayout = QHBoxLayout() #create new horizontal layout
         textLabel = QLabel(text) #creat a text lable 
         textLabel.setAlignment(Qt.AlignCenter)  #set text alignment to center
-        textLabel.setStyleSheet("font-size: 18px; font-family: Arial;") #set font size of text
+        textLabel.setStyleSheet("font-size: 18px;") #set font size of text
         textLabel.setWordWrap(self.wordWrap) #set a wordWrap for better text representation
 
         if icon != 'NoIcon': #if true it means we need to set an icon for message box
