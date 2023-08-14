@@ -1,11 +1,14 @@
 import sys
 import signal
+import logging
+logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
 from abc import ABC, abstractmethod
 import scapy.all as scapy
 from scapy.all import sniff, IP, IPv6, TCP, UDP, ICMP, ARP, Raw
 from scapy.layers.l2 import STP
 from scapy.layers.dns import DNS
 from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
+from scapy.layers.tls.all import TLS, TLSClientHello, TLSServerHello, TLSClientKeyExchange, TLSServerKeyExchange, TLSNewSessionTicket
 import netifaces
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import pyqtSignal, Qt, QThread, QTimer, QSize, QRegExp
@@ -134,7 +137,7 @@ class Default_Packet(ABC): #abstarct class for default packet
 
 #--------------------------------------------Default_Packet-END----------------------------------------------#
 
-#--------------------------------------------TCP----------------------------------------------#
+#--------------------------------------------------TCP------------------------------------------------#
 class TCP_Packet(Default_Packet):
     def __init__(self, packet=None, id=None): # ctor for tcp packet
         super().__init__('TCP', packet, id) # call parent ctor
@@ -182,10 +185,9 @@ class TCP_Packet(Default_Packet):
             output += '\n\n'
         return output
 
-#--------------------------------------------TCP-END----------------------------------------------#
+#-------------------------------------------------TCP-END------------------------------------------------#
 
-
-#--------------------------------------------UDP----------------------------------------------#
+#---------------------------------------------------UDP-------------------------------------------------#
 class UDP_Packet(Default_Packet):
     def __init__(self, packet=None, id=None): # ctor 
         super().__init__('UDP', packet, id) # call parent ctor
@@ -195,9 +197,167 @@ class UDP_Packet(Default_Packet):
             self.packetType = UDP #add packet type
 
 
-#--------------------------------------------UDP-END----------------------------------------------#
+#----------------------------------------------UDP-END----------------------------------------------#
 
-#--------------------------------------------ICMP----------------------------------------------#
+#------------------------------------------------HTTP------------------------------------------------#
+class HTTP_Packet(Default_Packet):
+    def __init__(self, packet=None, id=None):
+        super().__init__('HTTP', packet, id) # call parent ctor
+        if packet.haslayer(HTTP): #checks if packet is HTTP
+            self.packetType = HTTP #add packet type
+
+
+    #method for packet information
+    def moreInfo(self):
+        output = super().moreInfo() #call parent moreInfo method
+        if self.packet and HTTP in self.packet: #if packet has HTTP layer
+            httpPacket = self.packet[HTTP] #set the http packet
+            headers = {} #set headers to be an empty dictionary
+            if self.packet.haslayer(HTTPResponse): #if packet is http response
+                httpPacket = self.packet[HTTPResponse] #set the packet as http response
+            elif self.packet.haslayer(HTTPRequest): #if packet is http request
+                httpPacket = self.packet[HTTPRequest] #set the packet as http request
+            
+            if httpPacket.haslayer(HTTPResponse) or httpPacket.haslayer(HTTPRequest): #if http packets is response or request
+                for field in httpPacket.fields_desc: #iterating over fields desc list to retrive the headers dictionary
+                    fieldName = field.name #field name of packet
+                    fieldValue = getattr(httpPacket, fieldName) #field value of packet
+                    if isinstance(fieldValue, bytes): #if field value is byte we decode it
+                        fieldValue = fieldValue.decode() #decode field name byte
+                    headers[fieldName] = fieldValue #finally we add field value to headers dictionary
+
+            if self.packet.haslayer(HTTPResponse): #if the packet is response
+                httpVersion = headers.get('Http_Version') #get the http version of packet
+                statusCode = httpPacket.Status_Code.decode() #get the status code of response packet
+                contentLength = headers.get('Content_Length') #get the content length of response packet
+                server = headers.get('Server') #get the server of response packet
+                output += f'Type: Response\n\n' #add type of packet to output
+                output += f'HTTP Version: {httpVersion}\n\n' #add http version to output
+                output += f'Status Code: {statusCode}\n\n' #add status code to output
+                output += f'Content Length: {contentLength}\n\n' #add content length to output
+                output += self.fitStr('Server:', server) #add server of packet to output
+
+            elif self.packet.haslayer(HTTPRequest): #if the packet is request
+                httpVersion = headers.get('Http_Version') #get the http version of packet
+                method = httpPacket.Method.decode() #get the method name of request packet
+                url = httpPacket.Host.decode() + httpPacket.Path.decode() #get the url of the request packet
+                accept = headers.get('Accept') #get the accept info of request
+                referer = headers.get('Referer') #get the referer of request
+                output += f'Type: Request\n\n' #add type of packet to output
+                output += f'HTTP Version: {httpVersion}\n\n' #add http version to output
+                output += f'Method: {method}\n\n' #add method to output
+                output += self.fitStr('URL:', url) #add url to output
+                output += self.fitStr('Accept:', accept) #add accept to output
+                output += self.fitStr('Referer:', referer) #add referer to output
+        return output
+    
+#-----------------------------------------------HTTP-END------------------------------------------------#
+
+#---------------------------------------------------DNS------------------------------------------------#
+class DNS_Packet(Default_Packet):
+    def __init__(self, packet=None, id=None):
+        super().__init__('DNS', packet, id) # call parent ctor
+        if packet.haslayer(DNS): #checks if packet is DNS
+            self.packetType = DNS #add packet type
+
+
+    #method for brief packet information
+    def info(self):
+        output ='' #output string for information of packet
+        dnsPacket = self.packet[DNS] #parameter for dns packet
+        srcMac = self.packet.src #representst the source mac address
+        dstMac = self.packet.dst #represents the destination mac address
+        srcIp = '' #represents the source ip address
+        dstIp = '' #represents the destination ip address
+        srcPort = '' #represents the source port
+        dstPort ='' #represents the destination port
+        packetSize = len(self.packet) #represenets the packet size
+
+        if self.packet.haslayer(IP): #if true packet has ip layer
+            srcIp = self.packet[IP].src #set the source ip
+            dstIp = self.packet[IP].dst #set the destination ip
+        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP): #if dns packet transmitted through tcp or udp it has port 
+            srcPort = self.packet.sport #set the source port
+            dstPort = self.packet.dport #set the destination port
+
+        if (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and self.packet.haslayer(IP): #if it's transmitted through tcp or udp with ip
+            output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #add the info with ip to output
+        elif (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and not self.packet.haslayer(IP): #if its transmitted through tcp or udp without ip
+            output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #add the info without ip to output
+        elif self.packet.haslayer(IP): # if there's only ip layer
+            f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac})' #add the info to output
+        elif not self.packet.haslayer(IP): #else it wasn't transmitted through tcp or udp and it doesn't have ip
+            f'{self.name} Packet: ({srcMac}) --> ({dstMac})' #add the info to output
+
+        output += f' Type: {"Response" if dnsPacket.qr else "Request"}' #add the dns type, response or request
+        output += f' | Size: {packetSize} bytes' #add the size of the packet
+        return output
+
+
+    #method for packet information
+    def moreInfo(self):
+        output = super().moreInfo() #call parent moreInfo method
+        if self.packet and DNS in self.packet: #if packet has DNS layer
+            dnsPacket = self.packet[DNS] #save the dns packet in parameter
+            output += f'ID: {dnsPacket.id}\n\n' #id of the dns packet
+            if dnsPacket.qr == 1: #means its a response packet
+                if dnsPacket.an: #if dns packet is response packet
+                    output += f'Type: Response\n\n' #add type of packet to output
+                    output += self.fitStr('Response Name:', dnsPacket.an.rrname) #add repsonse name to output
+                    output += f'Response Type: {dnsPacket.an.type}, ' #add response type to output
+                    output += f'Response Class: {dnsPacket.an.rclass}\n\n' #add response class to output
+                    output += f'Num Responses: {len(dnsPacket.an)}\n\n' #add number of responses to output
+                    if hasattr(dnsPacket.an, 'rdata'): #check if rdata attribute exists
+                        output += self.fitStr('Response Data:', dnsPacket.an.rdata) #specify the rdata parameter
+            else: #means its a request packet
+                if dnsPacket.qd:
+                    output += f'Type: Request\n\n' #add type of packet to output
+                    output += self.fitStr('Request Name:', dnsPacket.qd.qname) #add request name to output
+                    output += f'Request Type: {dnsPacket.qd.qtype}, ' #add request type to output
+                    output += f'Request Class: {dnsPacket.qd.qclass}\n\n' #add request class to output
+                    output += f'Num Requests: {len(dnsPacket.qd)}\n\n' #add num of requests to output
+        return output
+    
+#-------------------------------------------------DNS-END----------------------------------------------#
+
+#--------------------------------------------------TLS--------------------------------------------------#
+class TLS_Packet(Default_Packet):
+    def __init__(self, packet=None, id=None):
+        super().__init__('TLS', packet, id) # call parent ctor
+        if packet.haslayer(TLS): #checks if packet is TLS
+            if IP not in packet: #if true the packet has no ip, means its raw
+                self.name = 'Raw TLS' #update the packet name
+            self.packetType = TLS #add packet type
+    
+    
+    #method for packet information
+    def moreInfo(self):
+        output = super().moreInfo() #call parent moreInfo method
+        if self.packet and TLS in self.packet: #if packet has TLS layer
+            tlsPacket = self.packet[TLS] #save the TLS packet in parameter
+            output += f'Version: {tlsPacket.version}\n\n' #version of the TLS packet
+            if self.packet.haslayer(TLSClientHello): #if true the packet is a client hello response
+                output += f'Handshake Type: Client Hello\n\n' #add handshake tyoe to output
+                output += f'Length: {self.packet[TLSClientHello].msglen}\n\n' #add length to output
+                output += self.fitStr('Cipher Suites:', self.packet[TLSClientHello].ciphers) #add cipher suites list to output
+            elif self.packet.haslayer(TLSServerHello): #if true the packet is a server hello response
+                output += f'Handshake Type: Server Hello\n\n' #add handshake tyoe to output
+                output += f'Length: {self.packet[TLSServerHello].msglen}\n\n' #add length to output
+                output += f'Cipher Suite: {self.packet[TLSServerHello].cipher}\n\n' #add cipher suite number to output
+            elif self.packet.haslayer(TLSClientKeyExchange): #if true the packet is a client key exchange response
+                output += f'Handshake Type: Client Key Exchange\n\n' #add handshake tyoe to output
+                output += f'Length: {self.packet[TLSClientKeyExchange].msglen}\n\n' #add length to output
+            elif self.packet.haslayer(TLSServerKeyExchange): #if true the packet is a server key exchange response
+                output += f'Handshake Type: Server Key Exchange\n\n' #add handshake tyoe to output
+                output += f'Length: {self.packet[TLSServerKeyExchange].msglen}\n\n' #add length to output
+            elif self.packet.haslayer(TLSNewSessionTicket): #if true the packet is a new session ticket response
+                output += f'Handshake Type: New Session Ticket\n\n' #add handshake tyoe to output
+                output += f'Length: {self.packet[TLSNewSessionTicket].msglen}\n\n' #add length to output
+        return output
+    
+#-----------------------------------------------TLS-END------------------------------------------------#
+
+#------------------------------------------------ICMP------------------------------------------------#
 class ICMP_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
         super().__init__('ICMP', packet, id) # call parent ctor
@@ -320,125 +480,6 @@ class STP_Packet(Default_Packet):
 
 # --------------------------------------------STP-END----------------------------------------------#
 
-# -----------------------------------------------DNS------------------------------------------------#
-class DNS_Packet(Default_Packet):
-    def __init__(self, packet=None, id=None):
-        super().__init__('DNS', packet, id) # call parent ctor
-        if packet.haslayer(DNS): #checks if packet is DNS
-            self.packetType = DNS #add packet type
-
-
-    #method for brief packet information
-    def info(self):
-        output ='' #output string for information of packet
-        dnsPacket = self.packet[DNS] #parameter for dns packet
-        srcMac = self.packet.src #representst the source mac address
-        dstMac = self.packet.dst #represents the destination mac address
-        srcIp = '' #represents the source ip address
-        dstIp = '' #represents the destination ip address
-        srcPort = '' #represents the source port
-        dstPort ='' #represents the destination port
-        packetSize = len(self.packet) #represenets the packet size
-
-        if self.packet.haslayer(IP): #if true packet has ip layer
-            srcIp = self.packet[IP].src #set the source ip
-            dstIp = self.packet[IP].dst #set the destination ip
-        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP): #if dns packet transmitted through tcp or udp it has port 
-            srcPort = self.packet.sport #set the source port
-            dstPort = self.packet.dport #set the destination port
-
-        if (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and self.packet.haslayer(IP): #if it's transmitted through tcp or udp with ip
-            output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #add the info with ip to output
-        elif (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and not self.packet.haslayer(IP): #if its transmitted through tcp or udp without ip
-            output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #add the info without ip to output
-        elif self.packet.haslayer(IP): # if there's only ip layer
-            f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac})' #add the info to output
-        elif not self.packet.haslayer(IP): #else it wasn't transmitted through tcp or udp and it doesn't have ip
-            f'{self.name} Packet: ({srcMac}) --> ({dstMac})' #add the info to output
-
-        output += f' Type: {"Response" if dnsPacket.qr else "Request"}' #add the dns type, response or request
-        output += f' | Size: {packetSize} bytes' #add the size of the packet
-        return output
-
-
-    #method for packet information
-    def moreInfo(self):
-        output = super().moreInfo() #call parent moreInfo method
-        if self.packet and DNS in self.packet: #if packet has DNS layer
-            dnsPacket = self.packet[DNS] #save the dns packet in parameter
-            output += f'ID: {dnsPacket.id}\n\n' #id of the dns packet
-            if dnsPacket.qr == 1: #means its a response packet
-                if dnsPacket.an: #if dns packet is response packet
-                    output += f'Type: Response\n\n' #add type of packet to output
-                    output += self.fitStr('Response Name:', dnsPacket.an.rrname) #add repsonse name to output
-                    output += f'Response Type: {dnsPacket.an.type}, ' #add response type to output
-                    output += f'Response Class: {dnsPacket.an.rclass}\n\n' #add response class to output
-                    output += f'Num Responses: {len(dnsPacket.an)}\n\n' #add number of responses to output
-                    if hasattr(dnsPacket.an, 'rdata'): #check if rdata attribute exists
-                        output += self.fitStr('Response Data:', dnsPacket.an.rdata) #specify the rdata parameter
-            else: #means its a request packet
-                if dnsPacket.qd:
-                    output += f'Type: Request\n\n' #add type of packet to output
-                    output += self.fitStr('Request Name:', dnsPacket.qd.qname) #add request name to output
-                    output += f'Request Type: {dnsPacket.qd.qtype}, ' #add request type to output
-                    output += f'Request Class: {dnsPacket.qd.qclass}\n\n' #add request class to output
-                    output += f'Num Requests: {len(dnsPacket.qd)}\n\n' #add num of requests to output
-        return output
-# --------------------------------------------DNS-END----------------------------------------------#
-
-# -----------------------------------------------HTTP------------------------------------------------#
-class HTTP_Packet(Default_Packet):
-    def __init__(self, packet=None, id=None):
-        super().__init__('HTTP', packet, id) # call parent ctor
-        if packet.haslayer(HTTP): #checks if packet is HTTP
-            self.packetType = HTTP #add packet type
-
-
-    #method for packet information
-    def moreInfo(self):
-        output = super().moreInfo() #call parent moreInfo method
-        if self.packet and HTTP in self.packet: #if packet has HTTP layer
-            httpPacket = self.packet[HTTP] #set the http packet
-            headers = {} #set headers to be an empty dictionary
-            if self.packet.haslayer(HTTPResponse): #if packet is http response
-                httpPacket = self.packet[HTTPResponse] #set the packet as http response
-            elif self.packet.haslayer(HTTPRequest): #if packet is http request
-                httpPacket = self.packet[HTTPRequest] #set the packet as http request
-            
-            if httpPacket.haslayer(HTTPResponse) or httpPacket.haslayer(HTTPRequest): #if http packets is response or request
-                for field in httpPacket.fields_desc: #iterating over fields desc list to retrive the headers dictionary
-                    fieldName = field.name #field name of packet
-                    fieldValue = getattr(httpPacket, fieldName) #field value of packet
-                    if isinstance(fieldValue, bytes): #if field value is byte we decode it
-                        fieldValue = fieldValue.decode() #decode field name byte
-                    headers[fieldName] = fieldValue #finally we add field value to headers dictionary
-
-            if self.packet.haslayer(HTTPResponse): #if the packet is response
-                httpVersion = headers.get('Http_Version') #get the http version of packet
-                statusCode = httpPacket.Status_Code.decode() #get the status code of response packet
-                contentLength = headers.get('Content_Length') #get the content length of response packet
-                server = headers.get('Server') #get the server of response packet
-                output += f'Type: Response\n\n' #add type of packet to output
-                output += f'HTTP Version: {httpVersion}\n\n' #add http version to output
-                output += f'Status Code: {statusCode}\n\n' #add status code to output
-                output += f'Content Length: {contentLength}\n\n' #add content length to output
-                output += self.fitStr('Server:', server) #add server of packet to output
-
-            elif self.packet.haslayer(HTTPRequest): #if the packet is request
-                httpVersion = headers.get('Http_Version') #get the http version of packet
-                method = httpPacket.Method.decode() #get the method name of request packet
-                url = httpPacket.Host.decode() + httpPacket.Path.decode() #get the url of the request packet
-                accept = headers.get('Accept') #get the accept info of request
-                referer = headers.get('Referer') #get the referer of request
-                output += f'Type: Request\n\n' #add type of packet to output
-                output += f'HTTP Version: {httpVersion}\n\n' #add http version to output
-                output += f'Method: {method}\n\n' #add method to output
-                output += self.fitStr('URL:', url) #add url to output
-                output += self.fitStr('Accept:', accept) #add accept to output
-                output += self.fitStr('Referer:', referer) #add referer to output
-        return output
-# -----------------------------------------------HTTP-END------------------------------------------------#
-
 #-----------------------------------------HELPER-FUNCTIONS-----------------------------------------#
 
 def GetAvailableNetworkInterfaces(): # method to print all available network interfaces
@@ -479,6 +520,14 @@ def handleUDP(packet):
     packetCounter += 1 #increase the counter
     return UDP_Object #finally return the object
 
+#method that handles HTTP packets
+def handleHTTP(packet):
+    global packetCounter
+    HTTP_Object = HTTP_Packet(packet, packetCounter) #create a new object for packet
+    packetDictionary[HTTP_Object.getId()] = HTTP_Object #insert it to packet dictionary
+    packetCounter += 1 #increase the counter
+    return HTTP_Object #finally return the object
+
 #method that handles DNS packets
 def handleDNS(packet):
     global packetCounter
@@ -487,13 +536,15 @@ def handleDNS(packet):
     packetCounter += 1 #increase the counter
     return DNS_Object #finally return the object
 
-#method that handles HTTP packets
-def handleHTTP(packet):
+#method that handles TLS packets
+def handleTLS(packet):
     global packetCounter
-    HTTP_Object = HTTP_Packet(packet, packetCounter) #create a new object for packet
-    packetDictionary[HTTP_Object.getId()] = HTTP_Object #insert it to packet dictionary
-    packetCounter += 1 #increase the counter
-    return HTTP_Object #finally return the object
+    if packet[TLS].type == 22: #we need to capture handshakes TLS packets so 22 is the correct type
+        TLS_Object = TLS_Packet(packet, packetCounter) #create a new object for packet
+        packetDictionary[TLS_Object.getId()] = TLS_Object #insert it to packet dictionary
+        packetCounter += 1 #increase the counter
+        return TLS_Object #finally return the object
+    return None #else we return none
 
 #method that handles ICMP packets
 def handleICMP(packet):
@@ -562,7 +613,9 @@ class PacketCaptureThread(QThread):
         #for each packet we receive we send it to the dict to determine its identity and call the necessary handle method
         for packetType, handler in self.packetFilter.items():
             if packet.haslayer(packetType): #if we found matching packet we call its handle method
-                self.packetQueue.put(handler(packet).info()) #call handler methods of each packet signaling it to the GUI
+                handledPacket = handler(packet) #call handler method of each packet
+                if handledPacket != None: #check if its not none
+                    self.packetQueue.put(handledPacket.info()) #we put the packet's info in the queue for later use 
                 break
         #else:
         #    print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet
@@ -713,6 +766,8 @@ class PacketSniffer(QMainWindow):
         packetFilter = ''
         if not self.HTTPCheckBox.isChecked():
             packetFilter += 'HTTP,'
+        if not self.TLSCheckBox.isChecked():
+            packetFilter += 'TLS,'
         if not self.TCPCheckBox.isChecked():
             packetFilter += 'TCP,'
         if not self.DNSCheckBox.isChecked():
@@ -728,6 +783,7 @@ class PacketSniffer(QMainWindow):
         #dicionary for packet kinds and their methods for handling:
         captureDictionary = {
         HTTP: handleHTTP,
+        TLS: handleTLS,
         TCP: handleTCP,
         DNS: handleDNS,
         UDP: handleUDP,
