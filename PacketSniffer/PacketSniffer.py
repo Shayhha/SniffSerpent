@@ -707,6 +707,7 @@ class PacketSniffer(QMainWindow):
                 CustomMessageBox(title, str(e), icon)
                 return #stop the initialization of scan
             self.ClearClicked() #call clear method for clearing the memory and screen for new scan
+            self.handleCheckBoxes(False) #call our method for disabling the checkboxes
             self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP) #initialzie the packet thread with the queue we initialized
             self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
             self.packetCaptureThread.start() #calling the run method of the thread to start the scan
@@ -721,6 +722,7 @@ class PacketSniffer(QMainWindow):
             self.packetCaptureThread.stop() #calls stop method of the thread 
             self.packetCaptureThread.exit() #kills the thread 
             self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan 
+            self.handleCheckBoxes(True) #set the checkboxes to be enabled again
             self.StartScanButton.setEnabled(True) #set scan button back to being clickable
             CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False)
     
@@ -835,6 +837,32 @@ class PacketSniffer(QMainWindow):
         if item is not None and packetIndex in packetDictionary: #checking if the packet in GUI list isn't None 
             p = packetDictionary[packetIndex] #taking the matching packet from the packetDictionary
             self.MoreInfoTextEdit.setText(p.moreInfo()) #add the information to the extended information section in GUI
+    
+    
+    #method to handle state of checkboxes, if state false we disable them, otherwise we enable them
+    def handleCheckBoxes(self, state):
+        if state: #if true we set the checkboxes and ip/port line edit to be enabled
+            self.HTTPCheckBox.setEnabled(True)
+            self.TLSCheckBox.setEnabled(True)
+            self.TCPCheckBox.setEnabled(True)
+            self.DNSCheckBox.setEnabled(True)
+            self.UDPCheckBox.setEnabled(True)
+            self.ICMPCheckBox.setEnabled(True)
+            self.ARPCheckBox.setEnabled(True)
+            self.STPCheckBox.setEnabled(True)
+            self.IPLineEdit.setEnabled(True)
+            self.PortLineEdit.setEnabled(True)
+        else: #else we disable the checkboxes and ip/port line edit
+            self.HTTPCheckBox.setEnabled(False)
+            self.TLSCheckBox.setEnabled(False)
+            self.TCPCheckBox.setEnabled(False)
+            self.DNSCheckBox.setEnabled(False)
+            self.UDPCheckBox.setEnabled(False)
+            self.ICMPCheckBox.setEnabled(False)
+            self.ARPCheckBox.setEnabled(False)
+            self.STPCheckBox.setEnabled(False)
+            self.IPLineEdit.setEnabled(False)
+            self.PortLineEdit.setEnabled(False)
 
 #---------------------------------------------------Application-END----------------------------------------------------#
 
