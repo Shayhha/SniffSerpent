@@ -1,5 +1,5 @@
 import sys
-import signal
+import re
 import logging
 logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
 from abc import ABC, abstractmethod
@@ -13,7 +13,8 @@ import netifaces
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import pyqtSignal, Qt, QThread, QTimer, QSize, QRegExp
 from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QRegExpValidator, QIntValidator
-from PyQt5.QtWidgets import QApplication, QDesktopWidget, QMainWindow, QWidget, QCheckBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy, QMessageBox, QDialog, QLabel, QPushButton, QStyle, QHBoxLayout, QFileDialog
+from PyQt5.QtWidgets import QApplication, QDesktopWidget, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy, QDialog, QLabel, QPushButton, QStyle, QHBoxLayout, QFileDialog
+from urllib.parse import unquote
 from queue import Queue
 
 
@@ -50,7 +51,7 @@ class Default_Packet(ABC): #abstarct class for default packet
         output = ''
         if Raw in self.packet: #insert payload data (if available)
             payload = self.packet[Raw].load #get payload data from packet
-            output += f'Payload Data: {payload.hex()}\n' #insert payload as hexadecimal
+            output += f'Payload Data: {payload.hex()}\n\n' #insert payload as hexadecimal
         return output
     
 
@@ -70,6 +71,33 @@ class Default_Packet(ABC): #abstarct class for default packet
         else: #else info is none
             output += f'{st} {info}\n\n' #add to output the value with none value 
         return output
+
+
+    #method for retrieving login credentials from http packet
+    def loginInfo(self):
+        credentials = {} #credentials dictionary for username and password
+        httpRegex = lambda key: rf'{key}=([^&]+)' #regex for http payload template, regex that ends in & at the end (if present)
+        #list for usernames and password labels that are common in http payloads
+        usernames = ['username', 'Username', 'UserName', 'user', 'User', 'uname', 'Uname', 'usr', 'Usr', 'email', 'Email', 'login', 'Login', 'usrname', 'Usrname', 'uid', 'Uid']
+        passwords = ['password', 'Password', 'pass', 'Pass', 'pwd', 'Pwd', 'passwd', 'Passwd', 'pswd', 'psw', 'secret', 'Secret', 'secure', 'Secure', 'key', 'Key', 'auth', 'Auth']
+        if self.packet.haslayer(Raw) and self.packet.haslayer(HTTPRequest): #if true we have http request packet and it has a payload
+            payload = self.packet[Raw].load.decode('utf-8', errors='replace') #we decode the payload of the packet 
+            for username in usernames: #we iterate over the usernames to check if there's a matching username label
+                if username in payload or username.upper() in payload: #if true we found a matching label
+                    userRegex = httpRegex(username) #create a regex with the username label and regex template
+                    usr = re.search(userRegex, payload) #we call search method of regex to check if the username matching the regex 
+                    if usr: #if true the username is valid
+                        credentials['username'] = unquote(usr.group(1)) #we add the username to the dictionary
+                        break
+            if credentials: #if we found a username, we continue to get the password
+                for password in passwords:  #we iterate over the passwords to check if there's a matching password label
+                    if password in payload or password.upper() in payload: #if true we found a matching label
+                        passRegex = httpRegex(password) #create a regex with the password label and regex template
+                        pwd = re.search(passRegex, payload) #we call search method of regex to check if the password matching the regex 
+                        if pwd: #if true the password is valid
+                            credentials['password'] = unquote(pwd.group(1)) #we add the password to the dictionary
+                            break
+        return credentials
 
 
     #method for ip configuration capture
@@ -114,8 +142,11 @@ class Default_Packet(ABC): #abstarct class for default packet
             output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #insert info to output
         elif not self.packet.haslayer(IP): #else no ip layer 
             output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #insert info without ip to output
-        if self.packet.haslayer(HTTP) and (self.packet.haslayer(HTTPResponse) or self.packet.haslayer(HTTPRequest)):
-            output += f' Type: {"Response" if self.packet.haslayer(HTTPResponse) else "Request"}' #add http type, response or request
+        if self.packet.haslayer(HTTP) and (self.packet.haslayer(HTTPResponse) or self.packet.haslayer(HTTPRequest)): #if true packet is http
+            if self.packet.haslayer(HTTPRequest) and self.loginInfo(): #if true it means we have a login request http packet (with username and password)
+                output += ' Type: Login Request' #add http login request type to ouput
+            else: #else its a regular request or response http packet
+                output += f' Type: {"Response" if self.packet.haslayer(HTTPResponse) else "Request"}' #add http type, response or request
         output += f' | Size: {packetSize} bytes' #insert packet size to output
         return output
 
@@ -133,7 +164,6 @@ class Default_Packet(ABC): #abstarct class for default packet
             output += f'Destination MAC: {self.packet.dst}\n\n' #insert packet destination mac address
         output += self.ipInfo() #call ip method to add neccessary info if ip layer is present
         return output
-
 
 #--------------------------------------------Default_Packet-END----------------------------------------------#
 
@@ -231,22 +261,27 @@ class HTTP_Packet(Default_Packet):
                 statusCode = httpPacket.Status_Code.decode() #get the status code of response packet
                 contentLength = headers.get('Content_Length') #get the content length of response packet
                 server = headers.get('Server') #get the server of response packet
-                output += f'Type: Response\n\n' #add type of packet to output
+                output += 'Type: Response\n\n' #add type of packet to output
                 output += f'HTTP Version: {httpVersion}\n\n' #add http version to output
                 output += f'Status Code: {statusCode}\n\n' #add status code to output
                 output += f'Content Length: {contentLength}\n\n' #add content length to output
                 output += self.fitStr('Server:', server) #add server of packet to output
 
             elif self.packet.haslayer(HTTPRequest): #if the packet is request
+                httpLogin = self.loginInfo() #call loginInfo method to get login credentials (if available)
                 httpVersion = headers.get('Http_Version') #get the http version of packet
                 method = httpPacket.Method.decode() #get the method name of request packet
                 url = httpPacket.Host.decode() + httpPacket.Path.decode() #get the url of the request packet
                 accept = headers.get('Accept') #get the accept info of request
                 referer = headers.get('Referer') #get the referer of request
-                output += f'Type: Request\n\n' #add type of packet to output
+                output += 'Type: Login Request\n\n' if httpLogin else 'Type: Request\n\n' #add type of packet to output based on http info
                 output += f'HTTP Version: {httpVersion}\n\n' #add http version to output
                 output += f'Method: {method}\n\n' #add method to output
                 output += self.fitStr('URL:', url) #add url to output
+                if httpLogin: #if true we have captured login information
+                    output += 'Login Credentials:\n\n' #add login credentials to output
+                    output += self.fitStr('Username:', httpLogin['username']) #add usernname from our httpLogin dict
+                    output += self.fitStr('Password:', httpLogin['password']) #add password from our httpLogin dict
                 output += self.fitStr('Accept:', accept) #add accept to output
                 output += self.fitStr('Referer:', referer) #add referer to output
         return output
@@ -950,5 +985,5 @@ if __name__ == '__main__':
     #----------------APP----------------#
     #GetAvailableNetworkInterfaces()
 
-#-----------------------------------------------------------MAIN-END------------------------------------------------------------#
+#-----------------------------------------------------------MAIN-END---------------------------------------------------------#
 
