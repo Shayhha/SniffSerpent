@@ -773,13 +773,14 @@ class PacketSniffer(QMainWindow):
                     if filePath.endswith('.pcap'): #means user chose pcap file
                         packetList = [packet.getPacket() for packet in packetDictionary.values()] #we convert the packet dictionary to list for scapy wrpcap method
                         wrpcap(filePath, packetList) #call wrpcap method to write the captured packets into pcap file
+                        CustomMessageBox('Scan Saved', 'Saved scan detalis to PCAP file.', 'Information', False) #notify the user for success
                     else: #else user chose a txt file
                         with open(filePath, 'w') as file: #we open the file for writing
                             for packet in packetDictionary.values(): #iterating over the packet dictionary to extract the info 
                                 file.write('------------------------------------------------------------------------------------\n\n')
                                 file.write(packet.moreInfo()) #write the packet info to the file (extended information)
                                 file.write('------------------------------------------------------------------------------------\n\n')
-                    CustomMessageBox('Scan Saved', 'Saved scan detalis to text file.', 'Information', False) #notify the user for success
+                            CustomMessageBox('Scan Saved', 'Saved scan detalis to text file.', 'Information', False) #notify the user for success
                 except Exception as e: #if error happend we print the error to terminal
                     print(f"Error occurred while saving: {e}")
             else: #else user didnt specify a file path
