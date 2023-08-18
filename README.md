@@ -17,7 +17,7 @@ git clone https://github.com/Shayhha/PacketSniffer.git
 - Enables user to search packets by type, port and IP address.
 - Provides detailed packet information including IP layers.
 - Utilizes a clean and intuitive GUI developed with PyQt5.
-- Enables users to save scan results as a TXT file for further analysis.
+- Enables users to save scan results as a TXT file or PCAP file for further analysis.
 - Leverages Scapy, a Python library for network packet manipulation.
 
 ## Usage
@@ -40,7 +40,7 @@ git clone https://github.com/Shayhha/PacketSniffer.git
 
 ### Save Scan Results
 
-- After the scan, click the "Save Scan" button to export the captured packet details to a TXT file.
+- After the scan, click the "Save Scan" button to export the captured packet details to a TXT file or PCAP file.
 - This allows for offline analysis and sharing of scan results with others.
 
 ## Requirements
