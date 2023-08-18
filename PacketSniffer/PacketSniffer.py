@@ -4,7 +4,7 @@ import logging
 logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
 from abc import ABC, abstractmethod
 import scapy.all as scapy
-from scapy.all import sniff, IP, IPv6, TCP, UDP, ICMP, ARP, Raw
+from scapy.all import sniff, wrpcap, IP, IPv6, TCP, UDP, ICMP, ARP, Raw
 from scapy.layers.l2 import STP
 from scapy.layers.dns import DNS
 from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
@@ -767,17 +767,23 @@ class PacketSniffer(QMainWindow):
         #if packet dictionary isn't empty and if there's no scan in progress we open the save window
         if any(packetDictionary.values()) and self.packetCaptureThread is None:
             options = QFileDialog.Options() #this is for file options
-            filePath, _ = QFileDialog.getSaveFileName(self, 'Save Scan Data', 'Packet Scan', 'Text Files (*.txt);;All Files (*)', options=options) #save the file in a specific path
+            filePath, _ = QFileDialog.getSaveFileName(self, 'Save Scan Data', 'Packet Scan', 'Text File (*.txt);;PCAP File (*.pcap)', options=options) #save the file in a specific path
             if filePath: #if user chose valid path we continue
                 try: 
-                    with open(filePath, 'w') as file: #we open the file for writing
-                        for packet in packetDictionary.values(): #iterating over the packet dictionary to extract the info 
-                            file.write('------------------------------------------------------------------------------------\n\n')
-                            file.write(packet.moreInfo()) #write the packet info to the file (extended information)
-                            file.write('------------------------------------------------------------------------------------\n\n')
-                        CustomMessageBox('Scan Saved', 'Saved scan detalis to text file.', 'Information', False) #notify the user for success
+                    if filePath.endswith('.pcap'): #means user chose pcap file
+                        packetList = [packet.getPacket() for packet in packetDictionary.values()] #we convert the packet dictionary to list for scapy wrpcap method
+                        wrpcap(filePath, packetList) #call wrpcap method to write the captured packets into pcap file
+                    else: #else user chose a txt file
+                        with open(filePath, 'w') as file: #we open the file for writing
+                            for packet in packetDictionary.values(): #iterating over the packet dictionary to extract the info 
+                                file.write('------------------------------------------------------------------------------------\n\n')
+                                file.write(packet.moreInfo()) #write the packet info to the file (extended information)
+                                file.write('------------------------------------------------------------------------------------\n\n')
+                    CustomMessageBox('Scan Saved', 'Saved scan detalis to text file.', 'Information', False) #notify the user for success
                 except Exception as e: #if error happend we print the error to terminal
                     print(f"Error occurred while saving: {e}")
+            else: #else user didnt specify a file path
+                CustomMessageBox('Save Error', 'You must choose a file type for saving!', 'Critical', False) #show message box with error
         elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #if scan in progress we notify the user
             CustomMessageBox('Scan In Progress', 'Cannot save scan while in progress!', 'Information', False)
         else: #else we show a "saved denied" error if something happend
