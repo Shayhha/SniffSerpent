@@ -1,4 +1,5 @@
 import sys
+import os
 import re
 import logging
 logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
@@ -766,8 +767,12 @@ class PacketSniffer(QMainWindow):
     def saveScan(self):
         #if packet dictionary isn't empty and if there's no scan in progress we open the save window
         if any(packetDictionary.values()) and self.packetCaptureThread is None:
+            defaultDirectory = os.path.join(os.path.expanduser('~'), 'Desktop') #set default directory to be desktop 
+            if not os.path.exists(defaultDirectory): #if desktop directory isn't available we set it to home directory
+                defaultDirectory = os.path.expanduser('~') #setting the default directory to be home directory
+            defaultFilePath = os.path.join(defaultDirectory, 'Packet Scan') #we set the default file name, user can change that in dialog
             options = QFileDialog.Options() #this is for file options
-            filePath, _ = QFileDialog.getSaveFileName(self, 'Save Scan Data', 'Packet Scan', 'Text File (*.txt);;PCAP File (*.pcap)', options=options) #save the file in a specific path
+            filePath, _ = QFileDialog.getSaveFileName(self, 'Save Scan Data', defaultFilePath, 'Text File (*.txt);;PCAP File (*.pcap)', options=options) #save the file in a specific path
             if filePath: #if user chose valid path we continue
                 try: 
                     if filePath.endswith('.pcap'): #means user chose pcap file
