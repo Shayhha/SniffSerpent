@@ -5,12 +5,11 @@ import logging
 logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
 from abc import ABC, abstractmethod
 import scapy.all as scapy
-from scapy.all import sniff, wrpcap, IP, IPv6, TCP, UDP, ICMP, ARP, Raw
+from scapy.all import sniff, wrpcap, get_if_list, IP, IPv6, TCP, UDP, ICMP, ARP, Raw 
 from scapy.layers.l2 import STP
 from scapy.layers.dns import DNS
 from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 from scapy.layers.tls.all import TLS, TLSClientHello, TLSServerHello, TLSClientKeyExchange, TLSServerKeyExchange, TLSNewSessionTicket
-import netifaces
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import pyqtSignal, Qt, QThread, QTimer, QSize, QRegExp
 from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QRegExpValidator, QIntValidator
@@ -518,26 +517,45 @@ class STP_Packet(Default_Packet):
 
 #-----------------------------------------HELPER-FUNCTIONS-----------------------------------------#
 
-def GetAvailableNetworkInterfaces(): # method to print all available network interfaces
+#method to print all available interfaces
+def GetAvailableInterfaces():
     #get a list of all available network interfaces
-    interfaces = netifaces.interfaces()
+    interfaces = get_if_list() #call get_if_list method to retrieve the available interfaces
     if interfaces: #if there are interfaces we print them
         print('Available network interfaces:')
         i = 1 #counter for the interfaces 
         for interface in interfaces: #print all availabe interfaces
-            print(f'{i}. {interface}')
+            if sys.platform == 'win32': #if ran on windows we convert the guid number
+                print(f'{i}. {guidToStr(interface)}')
+            else: #else we are on other os so we print the interface 
+                print(f'{i}. {interface}')
             i += 1
     else: #else no interfaces were found
         print('No network interfaces found.')
 
 
-def GetNetworkInterface(inter): # method to receive desired interface on demand
-    interfaces = netifaces.interfaces() #represents a list of network interfaces
-    for interface in interfaces: # iterating over the list to get desired interface
-        if interface == inter:
-            return interface
-    # If no suitable interface is found, return none
-    return None
+#method for retrieving interface name from GUID number (Windows only)
+def guidToStr(guid):
+    try: #we try to import the specific windows method from scapy library
+        from scapy.arch.windows import get_windows_if_list
+    except ImportError as e: #we catch an import error if occurred
+        print(f'Error importing module: {e}') #print the error
+    interfaces = get_windows_if_list() #use the windows method to get list of guid number interfaces
+    for interface in interfaces: #iterating over the list of interfaces
+        if interface['guid'] == guid: #we find the matching guid number interface
+            return interface['name'] #return the name of the interface associated with guid number
+    return None #else we didnt find the guid number so we return none
+
+
+#method for retrieving the network interfaces
+def getNetworkInterfaces():
+    networkNames = ['eth', 'wlan', 'en', 'Ethernet', 'Wi-Fi'] #this list represents the usual network interfaces that are available in various platfroms
+    interfaces = get_if_list() #get a list of the network interfaces
+    if sys.platform == 'win32': #if current os is Windows we convert the guid number to interface name
+        temp = [guidToStr(interface) for interface in interfaces if guidToStr(interface) is not None] #get a new list of network interfaces with correct names instead of guid numbers
+        interfaces = temp #assign the new list to our interfaces variable
+    matchedInterfaces = [interface for interface in interfaces if any(interface.startswith(name) for name in networkNames)] #we filter the list to retrieving ethernet and wifi interfaces
+    return matchedInterfaces #return the matched interfaces as list
 
 #-----------------------------------------HANDLE-FUNCTIONS-----------------------------------------#
 #method that handles TCP packets
@@ -692,6 +710,7 @@ class PacketSniffer(QMainWindow):
         self.PacketList.doubleClicked.connect(self.handleItemDoubleClicked) #add method to handle clicks on the items in packet list
         self.setLineEditValidate() #call the method to set the validators for the QLineEdit for port and ip
         self.IPLineEdit.textChanged.connect(self.checkIPValidity) #connect signal for textChanged for IP to determine its validity
+        self.initComboBox() #set the combobox interface names 
         self.center() #make the app open in center of screen
         self.show() #show the application
 		
@@ -703,6 +722,7 @@ class PacketSniffer(QMainWindow):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
     
+
     #method to check the IP Line edit validity in gui (using signals)
     def checkIPValidity(self):
         ip = self.IPLineEdit.text().strip() #get the ip user entered in gui
@@ -729,7 +749,16 @@ class PacketSniffer(QMainWindow):
         self.IPLineEdit.setPlaceholderText('Optional') #set placeholder text for IP
         self.PortLineEdit.setValidator(portValidator) #set validaotr for port
         self.PortLineEdit.setPlaceholderText('Optional') #set placeholder text for port
-
+    
+    
+    #method for setting the parameters for the interfaces combobox 
+    def initComboBox(self):
+        self.InterfaceComboBox.view().window().setWindowFlags(Qt.Popup | Qt.FramelessWindowHint)
+        self.InterfaceComboBox.view().window().setAttribute(Qt.WA_TranslucentBackground)
+        interfaces = getNetworkInterfaces() #call our method to receive the network interfaces
+        if interfaces: #if not empty we add them to the combobox
+            self.InterfaceComboBox.addItems(interfaces) #add items to combobox
+            
 
     #method to handle the start scan button, initializing the packet sniffing
     def StartScanClicked(self):
@@ -744,7 +773,11 @@ class PacketSniffer(QMainWindow):
                 return #stop the initialization of scan
             self.ClearClicked() #call clear method for clearing the memory and screen for new scan
             self.handleCheckBoxes(False) #call our method for disabling the checkboxes
-            self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP) #initialzie the packet thread with the queue we initialized
+            interface = self.InterfaceComboBox.currentText() #get the chosen network interface from combobox
+            if interface == '': #if the input is empty it means no availabe interface found
+                CustomMessageBox('No Available Interface', 'Cannot find available network interface.', 'Critical', False) #show error message
+                return #stop the initialization of scan
+            self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP, interface) #initialzie the packet thread with the queue we initialized
             self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
             self.packetCaptureThread.start() #calling the run method of the thread to start the scan
             self.StartScanButton.setEnabled(False) #set the scan button to be unclickable while scan in progress
@@ -902,6 +935,7 @@ class PacketSniffer(QMainWindow):
             self.STPCheckBox.setEnabled(True)
             self.IPLineEdit.setEnabled(True)
             self.PortLineEdit.setEnabled(True)
+            self.InterfaceComboBox.setEnabled(True)
         else: #else we disable the checkboxes and ip/port line edit
             self.HTTPCheckBox.setEnabled(False)
             self.TLSCheckBox.setEnabled(False)
@@ -913,7 +947,8 @@ class PacketSniffer(QMainWindow):
             self.STPCheckBox.setEnabled(False)
             self.IPLineEdit.setEnabled(False)
             self.PortLineEdit.setEnabled(False)
-
+            self.InterfaceComboBox.setEnabled(False)
+            
 #---------------------------------------------------Application-END----------------------------------------------------#
 
 #---------------------------------------------------CustomMessageBox----------------------------------------------------#
@@ -995,7 +1030,7 @@ if __name__ == '__main__':
     except:
         print('Exiting')
     #----------------APP----------------#
-    #GetAvailableNetworkInterfaces()
+    #GetAvailableInterfaces()
 
 #-----------------------------------------------------------MAIN-END---------------------------------------------------------#
 

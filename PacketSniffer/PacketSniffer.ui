@@ -350,7 +350,7 @@ border: none;</string>
      </property>
      <property name="geometry">
       <rect>
-       <x>200</x>
+       <x>198</x>
        <y>110</y>
        <width>60</width>
        <height>39</height>
@@ -502,7 +502,7 @@ QPushButton:pressed {
     <widget class="QPushButton" name="SaveScanButton">
      <property name="geometry">
       <rect>
-       <x>540</x>
+       <x>537</x>
        <y>170</y>
        <width>180</width>
        <height>40</height>
@@ -620,7 +620,7 @@ QPushButton:pressed {
     <widget class="QLineEdit" name="IPLineEdit">
      <property name="geometry">
       <rect>
-       <x>350</x>
+       <x>485</x>
        <y>60</y>
        <width>150</width>
        <height>30</height>
@@ -668,15 +668,15 @@ padding: 4px;</string>
     <widget class="QLabel" name="PortLabel">
      <property name="geometry">
       <rect>
-       <x>550</x>
+       <x>655</x>
        <y>60</y>
-       <width>50</width>
+       <width>45</width>
        <height>30</height>
       </rect>
      </property>
      <property name="minimumSize">
       <size>
-       <width>50</width>
+       <width>45</width>
        <height>30</height>
       </size>
      </property>
@@ -703,7 +703,7 @@ border: none;</string>
     <widget class="QLineEdit" name="PortLineEdit">
      <property name="geometry">
       <rect>
-       <x>600</x>
+       <x>700</x>
        <y>60</y>
        <width>100</width>
        <height>30</height>
@@ -748,15 +748,15 @@ padding: 4px;</string>
     <widget class="QLabel" name="IPLabel">
      <property name="geometry">
       <rect>
-       <x>320</x>
+       <x>460</x>
        <y>60</y>
-       <width>30</width>
+       <width>20</width>
        <height>30</height>
       </rect>
      </property>
      <property name="minimumSize">
       <size>
-       <width>30</width>
+       <width>20</width>
        <height>30</height>
       </size>
      </property>
@@ -820,7 +820,7 @@ border: none;</string>
     <widget class="QCheckBox" name="TLSCheckBox">
      <property name="geometry">
       <rect>
-       <x>530</x>
+       <x>532</x>
        <y>110</y>
        <width>61</width>
        <height>39</height>
@@ -849,6 +849,148 @@ border: none;</string>
      </property>
      <property name="checked">
       <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QFrame" name="ComboBoxFrame">
+     <property name="geometry">
+      <rect>
+       <x>330</x>
+       <y>60</y>
+       <width>110</width>
+       <height>30</height>
+      </rect>
+     </property>
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>110</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>110</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: rgba(247, 247, 247,150);
+border-radius: 15px;
+border-width: 2px;
+border-radius: 15px;
+padding: 4px;</string>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <widget class="QComboBox" name="InterfaceComboBox">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>110</width>
+        <height>30</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>110</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>110</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <family>Arial</family>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="cursor">
+       <cursorShape>PointingHandCursor</cursorShape>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QComboBox {
+    background-color: transparent;
+    border-radius: 15px;
+    border-style: outset;
+    border-width: 2px;
+    border-radius: 15px;
+    border-color: black;	
+    padding: 4px;
+}
+QComboBox:hover {
+    border: 2px solid black
+}
+QComboBox QAbstractItemView {
+    color: rgb(0, 0, 0);    
+    background-color: rgb(243, 244, 255);
+    padding: 10px;
+    border: 2px solid black;
+    border-radius: 10px;
+    padding-left: 5px;
+    padding-right: 5px;
+    selection-background-color: rgb(73, 137, 255);
+}
+QComboBox QListView{
+outline: 0px;
+}</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QLabel" name="InterfaceLabel">
+     <property name="geometry">
+      <rect>
+       <x>240</x>
+       <y>60</y>
+       <width>90</width>
+       <height>30</height>
+      </rect>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>90</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <family>Arial</family>
+       <pointsize>16</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color:none;
+border: none;</string>
+     </property>
+     <property name="text">
+      <string>Interface</string>
      </property>
     </widget>
    </widget>
