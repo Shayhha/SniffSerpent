@@ -758,6 +758,8 @@ class PacketSniffer(QMainWindow):
         interfaces = getNetworkInterfaces() #call our method to receive the network interfaces
         if interfaces: #if not empty we add them to the combobox
             self.InterfaceComboBox.addItems(interfaces) #add items to combobox
+        if len(interfaces) >= 2: #if we have more then one available interface 
+            self.InterfaceComboBox.addItem('All') #we add "All" option to scan all available interfaces
             
 
     #method to handle the start scan button, initializing the packet sniffing
@@ -777,7 +779,10 @@ class PacketSniffer(QMainWindow):
             if interface == '': #if the input is empty it means no availabe interface found
                 CustomMessageBox('No Available Interface', 'Cannot find available network interface.', 'Critical', False) #show error message
                 return #stop the initialization of scan
-            self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP, interface) #initialzie the packet thread with the queue we initialized
+            if interface != 'All': #if true it means we need to scan on a specific interface
+                self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP, interface) #initialzie the packet thread with the queue we initialized and interface
+            else: #else user chose "All" option so we scan all available network interfaces
+                self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP) #initialzie the packet thread without specifing a interface, we scan all interfaces
             self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
             self.packetCaptureThread.start() #calling the run method of the thread to start the scan
             self.StartScanButton.setEnabled(False) #set the scan button to be unclickable while scan in progress
