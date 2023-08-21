@@ -30,6 +30,7 @@ git clone https://github.com/Shayhha/PacketSniffer.git
 
 ### Packet Filtering
 
+- Specify a desired network interface to sniff from the available network interfaces.
 - Customize packet filtering by selecting the packet types of interest (TCP, UDP, HTTP, DNS, TLS, ICMP, ARP, STP).
 - Define additional filters such as specific IP addresses, ports, and more.
 
@@ -47,16 +48,14 @@ git clone https://github.com/Shayhha/PacketSniffer.git
 
 Ensure you have the following dependencies installed on your system:
 
-- Scapy
 - PyQt5
-- Netifaces
+- Scapy
 
 You can easily install these dependencies using the following commands:
 
 ```bash
-pip install scapy
 pip install PyQt5
-pip install netifaces
+pip install scapy
 ```
 
 **Important:** On Windows based systems  [Npcap](https://npcap.com/#download) must be installed to enable packet analysis and capturing.
