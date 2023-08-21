@@ -54,7 +54,7 @@ Ensure you have the following dependencies installed on your system:
 You can easily install these dependencies using the following commands:
 
 ```bash
-pip install PyQt5
+pip install pyqt5
 pip install scapy
 ```
 
