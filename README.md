@@ -44,6 +44,14 @@ git clone https://github.com/Shayhha/SniffSerpent
 - After the scan, click the "Save Scan" button to export the captured packet details to a TXT file or PCAP file.
 - This allows for offline analysis and sharing of scan results with others.
 
+## Screenshots
+
+![Screenshot 1](SniffSerpent/images/scanScreenShot1.png)
+*Scan results*
+
+![Screenshot 2](SniffSerpent/images/scanScreenShot2.png)
+*Saving scan*
+
 ## Requirements
 
 Ensure you have the following dependencies installed on your system:
