@@ -7,7 +7,7 @@ SniffSerpent is a powerful network packet analysis tool built with a user-friend
 ## Clone Repository:
 
 ```shell
-git clone https://github.com/Shayhha/PacketSniffer.git
+git clone https://github.com/Shayhha/SniffSerpent
 ```
 
 ## Features
