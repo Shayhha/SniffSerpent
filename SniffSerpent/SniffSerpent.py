@@ -844,6 +844,7 @@ class PacketSniffer(QMainWindow):
 
     def initUI(self):
         self.setWindowTitle('SniffSerpent') #set title of window
+        self.setWindowIcon(QIcon('images/serpent.ico')) #set icon of window
         self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
         self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
         self.ClearButton.clicked.connect(self.ClearClicked) #add method to handle clear button 
