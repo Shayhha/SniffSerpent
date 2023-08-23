@@ -1,8 +1,8 @@
-# Packet Sniffer
+# SniffSerpent - Packet Sniffer
 
 ## Overview
 
-Packet Sniffer is a powerful network packet analysis tool built with a user-friendly GUI using PyQt and advanced packet capturing techniques using Scapy. It enables you to capture, examine, and analyze different types of network packets. The application currently supports seven packet types: TCP, UDP, HTTP, DNS, TLS, ICMP, DHCP, ARP, IGMP and STP. It also provides insightful details about packets containing IP layers and other packet specific parameters that you can analyze further.
+SniffSerpent is a powerful network packet analysis tool built with a user-friendly GUI using PyQt and advanced packet capturing techniques using Scapy. It enables you to capture, examine, and analyze different types of network packets. The application currently supports seven packet types: TCP, UDP, HTTP, DNS, TLS, ICMP, DHCP, ARP, IGMP and STP. It also provides insightful details about packets containing IP layers and other packet specific parameters that you can analyze further.
 
 ## Clone Repository:
 
