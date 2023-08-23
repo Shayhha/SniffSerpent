@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33829.357
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "SniffSerpent", "PacketSniffer\SniffSerpent.pyproj", "{5B213A4A-EF33-4AE6-B939-38F0404DC6BB}"
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "SniffSerpent", "SniffSerpent\SniffSerpent.pyproj", "{5B213A4A-EF33-4AE6-B939-38F0404DC6BB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
