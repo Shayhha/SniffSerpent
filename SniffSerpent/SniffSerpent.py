@@ -835,7 +835,7 @@ class PacketSniffer(QMainWindow):
 
     def __init__(self):
         super(PacketSniffer, self).__init__()
-        loadUi("PacketSniffer.ui", self) #load the ui file of the sniffer
+        loadUi('SniffSerpent.ui', self) #load the ui file of the sniffer
         self.initUI() #call init method
         self.packetModel = QStandardItemModel() #set the QListView model for adding items to it
         self.PacketList.setModel(self.packetModel) #set the model for the packetlist in gui
@@ -843,7 +843,7 @@ class PacketSniffer(QMainWindow):
         
 
     def initUI(self):
-        self.setWindowTitle('Packet Sniffer') #set title of window
+        self.setWindowTitle('SniffSerpent') #set title of window
         self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
         self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
         self.ClearButton.clicked.connect(self.ClearClicked) #add method to handle clear button 
