@@ -6,10 +6,12 @@ logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
 from abc import ABC, abstractmethod
 import scapy.all as scapy
 from scapy.all import sniff, wrpcap, get_if_list, IP, IPv6, TCP, UDP, ICMP, ARP, Raw 
-from scapy.layers.l2 import STP
 from scapy.layers.dns import DNS
 from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
+from scapy.layers.dhcp import DHCP, BOOTP
 from scapy.layers.tls.all import TLS, TLSClientHello, TLSServerHello, TLSClientKeyExchange, TLSServerKeyExchange, TLSNewSessionTicket
+from scapy.contrib.igmp import IGMP
+from scapy.layers.l2 import STP
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import pyqtSignal, Qt, QThread, QTimer, QSize, QRegExp
 from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QRegExpValidator, QIntValidator
@@ -118,7 +120,7 @@ class Default_Packet(ABC): #abstarct class for default packet
                 hopLimit = self.packet[IPv6].hlim #represents the hop limit parameter in packet
                 trafficClass = self.packet[IPv6].tc #represnets the traffic class in packet
                 output += f'Hop Limit: {hopLimit}, Traffic Class: {trafficClass}\n\n' #add them both to output
-        if hasattr(self.packet, 'chksum'): #if packey has checksum parameter
+        if hasattr(self.packet, 'chksum') and not self.packet.haslayer(IGMP): #if packet has checksum parameter (IGMP has its own)
             output += f'Checksum: {self.packet.chksum}\n\n' #we add the checksum to output
         output += f'Packet Size: {len(self.packet)} bytes\n\n' #add the packet size to output
         return output
@@ -147,6 +149,13 @@ class Default_Packet(ABC): #abstarct class for default packet
                 output += ' Type: Login Request' #add http login request type to ouput
             else: #else its a regular request or response http packet
                 output += f' Type: {"Response" if self.packet.haslayer(HTTPResponse) else "Request"}' #add http type, response or request
+        if self.packet.haslayer(DHCP): #if packet is DHCP 
+            output += ' Type: Discover' if self.packet[DHCP].options[0][1] == 1 else '' #add type if discover
+            output += ' Type: Offer' if self.packet[DHCP].options[0][1] == 2 else '' #add type if offer
+            output += ' Type: Request' if self.packet[DHCP].options[0][1] == 3 else '' #add type if request
+            output += ' Type: Acknowledge' if self.packet[DHCP].options[0][1] == 5 else '' #add type if acknowledge
+            output += ' Type: Release' if self.packet[DHCP].options[0][1] == 7 else '' #add type if release
+            output += ' Type: Info' if self.packet[DHCP].options[0][1] == 8 else '' #add type if info
         output += f' | Size: {packetSize} bytes' #insert packet size to output
         return output
 
@@ -169,8 +178,8 @@ class Default_Packet(ABC): #abstarct class for default packet
 
 #--------------------------------------------------TCP------------------------------------------------#
 class TCP_Packet(Default_Packet):
-    def __init__(self, packet=None, id=None): # ctor for tcp packet
-        super().__init__('TCP', packet, id) # call parent ctor
+    def __init__(self, packet=None, id=None): #ctor for tcp packet
+        super().__init__('TCP', packet, id) #call parent ctor
         if packet.haslayer(TCP): #checks if packet is TCP
             if IP not in packet: #if true the packet is raw
                 self.name = 'Raw TCP' #specify its a raw packet
@@ -219,8 +228,8 @@ class TCP_Packet(Default_Packet):
 
 #---------------------------------------------------UDP-------------------------------------------------#
 class UDP_Packet(Default_Packet):
-    def __init__(self, packet=None, id=None): # ctor 
-        super().__init__('UDP', packet, id) # call parent ctor
+    def __init__(self, packet=None, id=None): #ctor 
+        super().__init__('UDP', packet, id) #call parent ctor
         if packet.haslayer(UDP): #checks if packet is UDP
             if IP not in packet: #if true the packet has no ip, means its raw
                 self.name = 'Raw UDP' #update the packet name
@@ -291,7 +300,7 @@ class HTTP_Packet(Default_Packet):
 #---------------------------------------------------DNS------------------------------------------------#
 class DNS_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
-        super().__init__('DNS', packet, id) # call parent ctor
+        super().__init__('DNS', packet, id) #call parent ctor
         if packet.haslayer(DNS): #checks if packet is DNS
             self.packetType = DNS #add packet type
 
@@ -358,7 +367,7 @@ class DNS_Packet(Default_Packet):
 #--------------------------------------------------TLS--------------------------------------------------#
 class TLS_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
-        super().__init__('TLS', packet, id) # call parent ctor
+        super().__init__('TLS', packet, id) #call parent ctor
         if packet.haslayer(TLS): #checks if packet is TLS
             if IP not in packet: #if true the packet has no ip, means its raw
                 self.name = 'Raw TLS' #update the packet name
@@ -372,7 +381,7 @@ class TLS_Packet(Default_Packet):
             tlsPacket = self.packet[TLS] #save the TLS packet in parameter
             output += f'Version: {tlsPacket.version}\n\n' #version of the TLS packet
             if self.packet.haslayer(TLSClientHello): #if true the packet is a client hello response
-                output += f'Handshake Type: Client Hello\n\n' #add handshake tyoe to output
+                output += f'Handshake Type: Client Hello\n\n' #add handshake type to output
                 output += f'Length: {self.packet[TLSClientHello].msglen}\n\n' #add length to output
                 output += self.fitStr('Cipher Suites:', self.packet[TLSClientHello].ciphers) #add cipher suites list to output
             elif self.packet.haslayer(TLSServerHello): #if true the packet is a server hello response
@@ -394,19 +403,24 @@ class TLS_Packet(Default_Packet):
 
 #------------------------------------------------ICMP------------------------------------------------#
 class ICMP_Packet(Default_Packet):
+    icmpTypes = { #this list represents all possible icmp types based on their value 
+        0: 'Echo Reply', 3: 'Destination Unreachable', 4: 'Source Quench', 5: 'Redirect', 8: 'Echo Request', 9: 'Router Advertisement',
+        10: 'Router Selection', 11: 'Time Exceeded', 12: 'Parameter Problem', 13: 'Timestamp', 14: 'Timestamp Reply', 15: 'Information Request',
+        16: 'Information Reply', 17: 'Address Mask Request', 18: 'Address Mask Reply'}
+    
     def __init__(self, packet=None, id=None):
-        super().__init__('ICMP', packet, id) # call parent ctor
+        super().__init__('ICMP', packet, id) #call parent ctor
         if packet.haslayer(ICMP): #checks if packet is icmp
             if IP not in packet: #if true the packet has no ip, means its raw
                 self.name = 'Raw ICMP' #update the packet name
             self.packetType = ICMP #add packet type
 
-
+    
     #method for brief packet information
     def info(self):
         output = ''
         packetSize = len(self.packet) #represent the packet size
-        icmpType = self.packet[ICMP].type #represents icmp type
+        icmpType = self.icmpTypes[self.packet[ICMP].type] if self.packet[ICMP].type in self.icmpTypes else None #represents icmp type based onn the icmpTypes dictionary
         icmpCode = self.packet[ICMP].code #represents icmp code
         if IP in self.packet: #if packet has ip layer
             srcIp = self.packet[IP].src #represents the source ip
@@ -420,8 +434,9 @@ class ICMP_Packet(Default_Packet):
     #method for packet information
     def moreInfo(self): 
         output = ''
+        output += self.ipInfo() #call ip method for more ip info
         if ICMP in self.packet: #if packet has icmp layer
-            icmpType = self.packet[ICMP].type #represents icmp type
+            icmpType = self.icmpTypes[self.packet[ICMP].type] if self.packet[ICMP].type in self.icmpTypes else None #represents icmp type based onn the icmpTypes dictionary
             icmpCode = self.packet[ICMP].code #represents icmp code
             icmpSeq = self.packet[ICMP].seq #represents icmp sequence number
             icmpId = self.packet[ICMP].id #represents icmp identifier
@@ -430,10 +445,75 @@ class ICMP_Packet(Default_Packet):
             output += f'Code: {icmpCode}\n\n' #add icmp code to output
             output += f'Sequence Number: {icmpSeq}\n\n' #add icmp sequence number
             output += f'Identifier: {icmpId}\n\n' #add icmp identifier
-        output += self.ipInfo() #call ip method for more ip info
         return output
 
 #--------------------------------------------ICMP-END----------------------------------------------#
+
+#-----------------------------------------------DHCP-----------------------------------------------#
+class DHCP_Packet(Default_Packet):
+    def __init__(self, packet=None, id=None):
+        super().__init__('DHCP', packet, id) #call parent ctor
+        if packet.haslayer(DHCP): #if packet is DHCP
+            self.packetType = DHCP #set packet type
+        
+    
+    #method to retreive the option from the options list in DHCP packet
+    def getOption(self, parameter):
+        byteParameters = ['hostname', 'vendor_class_id', 'client_id'] #list that includes parameters to decode
+        for option in self.packet[DHCP].options: #if true the packet is DHCP
+            if option[0] == parameter: # if true we found a valid parameter in the list
+                if parameter == 'name_server' and len(option) > 2: #if DHCP returned multiple name servers 
+                    return ", ".join(option[1:]) #return all names with a comma seperating them
+                elif parameter in byteParameters: #if parameter in byteParameter list
+                    return option[1].decode() #we return the decoded parameter
+                else: #else we return the parameter in the list
+                    return option[1] #return the value in the tuple in list
+        return None #else we return none if parameter is'nt in the list
+                    
+
+    #method for packet information
+    def moreInfo(self):
+        output = super().moreInfo() #call parent moreInfo method
+        if DHCP in self.packet: #if true its a DHCP packet
+            dhcpPacket = self.packet[DHCP] #set the DHCP packet in variable
+            if dhcpPacket.options[0][1] == 1 or dhcpPacket.options[0][1] == 3: #if true its a dicovery/request DHCP packet
+                hostname = self.getOption('hostname') #get the hostname from options
+                serverID = self.getOption('server_id') #get the server id from options
+                requestedAddress = self.getOption('requested_addr') #get the requested address from options
+                vendorClassID = self.getOption('vendor_class_id') #get vendor class id from options
+                paramReqList = self.getOption('param_req_list') #get parameter request list from options
+                output += f'DHCP Type: Discover\n\n' if dhcpPacket.options[0][1] == 1 else f'DHCP Type: Request\n\n' #add type of DHCP, discovery or request
+                output += f'Host Name: {hostname}\n\n' if hostname else '' #add hostname to output
+                output += f'Server ID: {serverID}\n\n' if dhcpPacket.options[0][1] == 3 and serverID else '' #add server id to output
+                output += f'Requested Address: {requestedAddress}\n\n' if requestedAddress else '' #add requested addresses to outpit
+                output += f'Vendor Class ID: {vendorClassID}\n\n' if vendorClassID else '' #add vendor class id to output
+                output += self.fitStr('Parameter Request list:', paramReqList) if paramReqList else '' #add parameter request list to output
+            elif dhcpPacket.options[0][1] == 2 or dhcpPacket.options[0][1] == 5: #if true its a offer/aknowledge DHCP packet
+                subnetMask = self.getOption('subnet_mask') #get subnet mask from options
+                broadcastAddress = self.getOption('broadcast_address') #get boradcast address from options
+                leaseTime = self.getOption('lease_time') #get lease time from options
+                router = self.getOption('router') #get router from options
+                serverName = self.getOption('name_server') #get server name from options
+                output += f'DHCP Type: Offer\n\n' if dhcpPacket.options[0][1] == 2 else f'DHCP Type: Acknowledge\n\n' #add type of DHCP, offer or acknowledge
+                output += f'Subnet Mask: {subnetMask}\n\n' if subnetMask else '' #add subnet mask to output
+                output += f'Broadcast Address: {broadcastAddress}\n\n' if broadcastAddress else '' #add broadcast address to output
+                output += f'Lease Time: {leaseTime}\n\n' if leaseTime else '' #add lease time to output
+                output += f'Router Address: {router}\n\n' if router else '' #add router address to output
+                output += f'Offered Address: {self.packet[BOOTP].yiaddr}\n\n' if dhcpPacket.options[0][1] == 2 else f'Acknowledged Address: {self.packet[BOOTP].yiaddr}\n\n' #add specific info about the packet
+                output += self.fitStr('Server Name:', serverName) if serverName else '' #add server name to output
+            elif dhcpPacket.options[0][1] == 7: #if true its a release DHCP packet
+                serverID = self.getOption('server_id') #get server id from options
+                output += f'DHCP Type: Release\n\n' #add type to output
+                output += f'Server ID: {serverID}\n\n' if serverID else '' #add server id to output
+            elif dhcpPacket.options[0][1] == 8: #if true its a information DHCP packet
+                hostname = self.getOption('hostname') #get hostname from output
+                vendorClassID = self.getOption('vendor_class_id') #get vendor class id from options
+                output += f'DHCP Type: Information\n\n' #add type to output
+                output += f'Host Name: {hostname}\n\n' if hostname else '' #add hostname to output
+                output += f'Vendor Class ID: {vendorClassID}\n\n' if vendorClassID else '' #add vendor class id to output
+        return output
+    
+#--------------------------------------------DHCP-END----------------------------------------------#
 
 # --------------------------------------------ARP----------------------------------------------#
 class ARP_Packet(Default_Packet):
@@ -450,8 +530,9 @@ class ARP_Packet(Default_Packet):
         srcIp = self.packet[ARP].psrc #represents arp source ip address
         dstMac = self.packet[ARP].hwdst #represents arp destination mac address
         dstIp = self.packet[ARP].pdst #represents arp destination ip address
+        arpOperation = 'Request' if self.packet[ARP].op == 1 else 'Reply' #represents arp operation
         packetSize = len(self.packet) #represents the packet size 
-        output += f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac}) | Size: {packetSize} bytes' #add the packet info to output
+        output += f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac}) Type: {arpOperation} | Size: {packetSize} bytes' #add the packet info to output
         return output
 
 
@@ -465,17 +546,55 @@ class ARP_Packet(Default_Packet):
             output += f'Source IP: {self.packet[ARP].psrc}\n\n' #add arp source ip address
             output += f'Destination IP: {self.packet[ARP].pdst}\n\n' #add arp destination ip address
             output += f'Packet Size: {len(self.packet)} bytes\n\n' #add packet size
-            output += f'ARP Operation: {"Request" if self.packet[ARP].op == 1 else "Reply"}\n\n' #add the arp operation to output
-            output += f'ARP Hardware Type: {self.packet[ARP].hwtype}\n\n' #add the hardware type to output
-            output += f'ARP Protocol Type: {hex(self.packet[ARP].ptype)}\n\n' #add protocol type to output
-            output += f'ARP Hardware Length: {self.packet[ARP].hwlen}\n\n' #add hardware length to output
-            output += f'ARP Protocol Length: {self.packet[ARP].plen}\n\n' #add protocol length to output
+            output += f'Operation: {"Request" if self.packet[ARP].op == 1 else "Reply"}\n\n' #add the arp operation to output
+            output += f'Hardware Type: {self.packet[ARP].hwtype}\n\n' #add the hardware type to output
+            output += f'Protocol Type: {hex(self.packet[ARP].ptype)}\n\n' #add protocol type to output
+            output += f'Hardware Length: {self.packet[ARP].hwlen}\n\n' #add hardware length to output
+            output += f'Protocol Length: {self.packet[ARP].plen}\n\n' #add protocol length to output
             output += f'Packet Size: {len(self.packet)} bytes\n\n' #add packet size to output
         return output
         
-# --------------------------------------------ARP-END----------------------------------------------#
+#---------------------------------------------ARP-END----------------------------------------------#
 
-# --------------------------------------------STP----------------------------------------------#
+#-----------------------------------------------IGMP-----------------------------------------------#
+class IGMP_Packet(Default_Packet):
+    igmpTypes = {17: 'Membership Query', 18: 'Membership Report v1', 22: 'Membership Report v2', 23: 'Leave Group'} #IGMP types dictionary
+            
+    def __init__(self, packet=None, id=None):
+        super().__init__('IGMP', packet, id) #call parent ctor
+        if packet.haslayer(IGMP): #checks if packet is IGMP
+            self.packetType = IGMP #add pacet type
+            
+
+    #method for brief packet information
+    def info(self):
+        output = ''
+        srcMac = self.packet.src #represents the source mac address
+        dstMac = self.packet.dst #represents the destination mac address
+        packetSize = len(self.packet) #size of the packet
+        igmpType = self.igmpTypes[self.packet[IGMP].type] #represents the igmp type
+        if self.packet.haslayer(IP): #if true packet have ip address so we add the packet info with ip and type
+            srcIp = self.packet[IP].src #represents the source ip of packet
+            dstIp = self.packet[IP].dst #represents the destination ip of packet
+            output += f'{self.name} Packet: ({srcIp}) --> ({dstIp}) Type: {igmpType} | Size: {packetSize} bytes' #insert info to output
+        else: #if packet doesnt have ip layer we print its mac address annd type
+            output += f'{self.name} Packet: ({srcMac}) --> ({dstMac}) Type: {igmpType} | Size: {packetSize} bytes' #insert info to output
+        return output   
+
+
+    #method for packet information
+    def moreInfo(self):
+        output = super().moreInfo() #call parent moreInfo
+        if IGMP in self.packet: #if true it means packet is IGMP
+            output += f'Type: {self.igmpTypes[self.packet[IGMP].type]}\n\n' #add IGMP type to output
+            output += f'Group Address: {self.packet[IGMP].gaddr}\n\n' #add IGMP group address to output
+            output += f'Maximum Response Code: {self.packet[IGMP].mrcode}\n\n' #add IGMP mrcode to output
+            output += f'Checksum: {self.packet[IGMP].chksum}\n\n' #add IGMP checksum to output
+        return output
+
+#---------------------------------------------IGMP-END---------------------------------------------#
+
+#------------------------------------------------STP-----------------------------------------------#
 class STP_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
         super().__init__('STP', packet, id) #call parent ctor
@@ -608,6 +727,17 @@ def handleICMP(packet):
     packetCounter += 1 #increase the counter
     return ICMP_Object #finally return the object
 
+#method that handles DHCP packets
+def handleDHCP(packet):
+    global packetCounter
+    validParameters = [1, 2, 3, 5, 7, 8] #list that represents the valid paramteters for DHCP
+    if packet[DHCP].options[0][1] in validParameters: #we check if its a valid parameter
+        DHCP_Object = DHCP_Packet(packet, packetCounter) #create a new object for packet
+        packetDictionary[DHCP_Object.getId()] = DHCP_Object #insert it to packet dictionary
+        packetCounter += 1 #increase the counter
+        return DHCP_Object #finally return the object
+    return None #else we return none
+
 #method that handles ARP packets
 def handleARP(packet):
     global packetCounter
@@ -615,6 +745,17 @@ def handleARP(packet):
     packetDictionary[ARP_Object.getId()] = ARP_Object #insert it to packet dictionary
     packetCounter += 1 #increase the counter
     return ARP_Object #finally return the object
+
+#method that handles IGMP packets
+def handleIGMP(packet):
+    global packetCounter
+    validParameters = [17, 18, 22, 23] #list that represents the valid paramteters for IGMP
+    if packet[IGMP].type in validParameters: #we check if its a valid parameter
+        IGMP_Object = IGMP_Packet(packet, packetCounter) #create a new object for packet
+        packetDictionary[IGMP_Object.getId()] = IGMP_Object #insert it to packet dictionary
+        packetCounter += 1 #increase the counter
+        return IGMP_Object #finally return the object
+    return None #else we return none
 
 #method that handles STP packets
 def handleSTP(packet):
@@ -627,7 +768,7 @@ def handleSTP(packet):
 #-----------------------------------------HANDLE-FUNCTIONS-END-----------------------------------------#
 
 packetDictionary = {} #initialize the packet dictionary
-packetCounter = 0 # global counter for dictionary elements
+packetCounter = 0 #global counter for dictionary elements
 
 #-----------------------------------------HELPER-FUNCTIONS-END-----------------------------------------#
 
@@ -855,6 +996,8 @@ class PacketSniffer(QMainWindow):
             packetFilter += 'HTTP,'
         if not self.TLSCheckBox.isChecked():
             packetFilter += 'TLS,'
+        if not self.DHCPCheckBox.isChecked():
+            packetFilter += 'DHCP,'
         if not self.TCPCheckBox.isChecked():
             packetFilter += 'TCP,'
         if not self.DNSCheckBox.isChecked():
@@ -865,17 +1008,21 @@ class PacketSniffer(QMainWindow):
             packetFilter += 'ICMP,'
         if not self.ARPCheckBox.isChecked():
             packetFilter += 'ARP,'
+        if not self.IGMPCheckBox.isChecked():
+            packetFilter += 'IGMP,'
         if not self.STPCheckBox.isChecked():
             packetFilter += 'STP,'
         #dicionary for packet kinds and their methods for handling:
         captureDictionary = {
         HTTP: handleHTTP,
         TLS: handleTLS,
+        DHCP: handleDHCP,
         TCP: handleTCP,
         DNS: handleDNS,
         UDP: handleUDP,
         ICMP: handleICMP,
         ARP: handleARP,
+        IGMP: handleIGMP,
         STP: handleSTP,
         }
         if packetFilter != '': #if packetFilter isn't empty it means we need to filter the dictionary 
@@ -936,7 +1083,9 @@ class PacketSniffer(QMainWindow):
             self.DNSCheckBox.setEnabled(True)
             self.UDPCheckBox.setEnabled(True)
             self.ICMPCheckBox.setEnabled(True)
+            self.DHCPCheckBox.setEnabled(True)
             self.ARPCheckBox.setEnabled(True)
+            self.IGMPCheckBox.setEnabled(True)
             self.STPCheckBox.setEnabled(True)
             self.IPLineEdit.setEnabled(True)
             self.PortLineEdit.setEnabled(True)
@@ -948,7 +1097,9 @@ class PacketSniffer(QMainWindow):
             self.DNSCheckBox.setEnabled(False)
             self.UDPCheckBox.setEnabled(False)
             self.ICMPCheckBox.setEnabled(False)
+            self.DHCPCheckBox.setEnabled(False)
             self.ARPCheckBox.setEnabled(False)
+            self.IGMPCheckBox.setEnabled(False)
             self.STPCheckBox.setEnabled(False)
             self.IPLineEdit.setEnabled(False)
             self.PortLineEdit.setEnabled(False)
