@@ -18,6 +18,7 @@ git clone https://github.com/Shayhha/SniffSerpent
 - Provides detailed packet information including IP layers.
 - Utilizes a clean and intuitive GUI developed with PyQt5.
 - Enables users to save scan results as a TXT file or PCAP file for further analysis.
+- Enables users to load saved PCAP scan file and analyse scan results.
 - Leverages Scapy, a Python library for network packet manipulation.
 
 ## Usage
@@ -38,11 +39,18 @@ git clone https://github.com/Shayhha/SniffSerpent
 
 - Once the scan is started, captured packets will be displayed in the GUI.
 - The application provides insightful details about each packet, including its type, source, destination, and payload.
+- Users are able to click on a specific packet and see more information regarding that specific packet like source/destination IP and port.
 
 ### Save Scan Results
 
 - After the scan, click the "Save Scan" button to export the captured packet details to a TXT file or PCAP file.
 - This allows for offline analysis and sharing of scan results with others.
+
+### Load Scan From PCAP File
+
+- To load a scan, click the "Load Scan" button and choose a PCAP file to analyse its results.
+- This can be useful for furtur analysis of your scan results later on.
+- Users are able to load various PCAP scan files and compare them with previous results.
 
 ## Screenshots
 
