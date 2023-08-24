@@ -127,10 +127,6 @@ padding: 4px;</string>
 	padding: 4px;
 }
 
-#IPGridLayout {
-	background-color: transparent;
-
-}
 </string>
     </property>
     <property name="frameShape">
@@ -384,22 +380,22 @@ border: none;</string>
     <widget class="QPushButton" name="StartScanButton">
      <property name="geometry">
       <rect>
-       <x>70</x>
+       <x>95</x>
        <y>170</y>
-       <width>180</width>
+       <width>150</width>
        <height>40</height>
       </rect>
      </property>
      <property name="minimumSize">
       <size>
-       <width>180</width>
+       <width>150</width>
        <height>40</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>0</width>
-       <height>0</height>
+       <width>150</width>
+       <height>40</height>
       </size>
      </property>
      <property name="font">
@@ -443,22 +439,22 @@ QPushButton:pressed {
     <widget class="QPushButton" name="StopScanButton">
      <property name="geometry">
       <rect>
-       <x>300</x>
+       <x>265</x>
        <y>170</y>
-       <width>180</width>
+       <width>150</width>
        <height>40</height>
       </rect>
      </property>
      <property name="minimumSize">
       <size>
-       <width>180</width>
+       <width>150</width>
        <height>40</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>0</width>
-       <height>0</height>
+       <width>150</width>
+       <height>40</height>
       </size>
      </property>
      <property name="font">
@@ -502,22 +498,22 @@ QPushButton:pressed {
     <widget class="QPushButton" name="SaveScanButton">
      <property name="geometry">
       <rect>
-       <x>537</x>
+       <x>435</x>
        <y>170</y>
-       <width>180</width>
+       <width>150</width>
        <height>40</height>
       </rect>
      </property>
      <property name="minimumSize">
       <size>
-       <width>180</width>
+       <width>150</width>
        <height>40</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>0</width>
-       <height>0</height>
+       <width>150</width>
+       <height>40</height>
       </size>
      </property>
      <property name="font">
@@ -561,22 +557,22 @@ QPushButton:pressed {
     <widget class="QPushButton" name="ClearButton">
      <property name="geometry">
       <rect>
-       <x>770</x>
+       <x>775</x>
        <y>170</y>
-       <width>180</width>
+       <width>150</width>
        <height>40</height>
       </rect>
      </property>
      <property name="minimumSize">
       <size>
-       <width>180</width>
+       <width>150</width>
        <height>40</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>0</width>
-       <height>0</height>
+       <width>150</width>
+       <height>40</height>
       </size>
      </property>
      <property name="font">
@@ -1059,6 +1055,65 @@ border: none;</string>
      </property>
      <property name="checked">
       <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="LoadScanButton">
+     <property name="geometry">
+      <rect>
+       <x>605</x>
+       <y>170</y>
+       <width>150</width>
+       <height>40</height>
+      </rect>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>150</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>150</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <family>Arial</family>
+       <pointsize>14</pointsize>
+      </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background-color: rgb(123, 180, 255);
+	border-radius: 15px;
+	border-style: outset;
+	border-width: 2px;
+	border-radius: 15px;
+	border-color: black;
+	padding: 4px;
+}
+
+QPushButton:hover {
+    background-color: rgb(171, 201, 255);
+    border-radius: 15px;
+	border-style: outset;
+	border-width: 2px;
+	border-radius: 15px;
+	border-color: black;
+	padding: 4px;
+}
+
+QPushButton:pressed {
+    background-color: rgb(96, 141, 199);
+}</string>
+     </property>
+     <property name="text">
+      <string>Load Scan</string>
      </property>
     </widget>
    </widget>

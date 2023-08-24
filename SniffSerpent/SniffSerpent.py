@@ -5,7 +5,7 @@ import logging
 logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
 from abc import ABC, abstractmethod
 import scapy.all as scapy
-from scapy.all import sniff, wrpcap, get_if_list, IP, IPv6, TCP, UDP, ICMP, ARP, Raw 
+from scapy.all import sniff, wrpcap, rdpcap, get_if_list, IP, IPv6, TCP, UDP, ICMP, ARP, Raw 
 from scapy.layers.dns import DNS
 from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 from scapy.layers.dhcp import DHCP, BOOTP
@@ -775,21 +775,25 @@ packetCounter = 0 #global counter for dictionary elements
 #--------------------------------------------PacketCaptureThread----------------------------------------------#
 
 class PacketCaptureThread(QThread):
-    packetCaptured = pyqtSignal() #signal for the thread to update the main for changes
-    interface = None #inerface of network (optional)
+    packetCaptured = pyqtSignal(int) #signal for the thread to update the main for changes
+    setGUIState = pyqtSignal(bool) #signal for the thread to set the GUI elements from the main window
+    interface = None #inerface of network 
     packetQueue = None #packet queue pointer for the thread
     packetFilter = None #represents the packet type filter for sniffer
     PortandIp = None #string that represents port and ip for sniffer to filter with
+    packetList = None #packet list for loading scan with pcap file
     stopCapture = False #flag for capture status
 
-    def __init__(self, packetQueue, packetFilter, PortandIp, interface=None):
+    def __init__(self, packetQueue, packetFilter, PortandIp, interface=None, packetList=None):
         super(PacketCaptureThread, self).__init__()
         self.interface = interface #initialize the network interface if given
         self.packetQueue = packetQueue #setting the packetQueue from the packet sniffer class
         self.packetFilter = packetFilter #set the packet filter for scapy sniff method
         self.PortandIp = PortandIp #set the port and ip string for filthering with desired pord and ip
+        self.packetList = packetList #set the packet list if given
+        packetBuffer = 1000 if self.packetList else 500 #buffer for number of packets added to GUI
         self.updateTimer = QTimer(self) #initialzie the QTimer
-        self.updateTimer.timeout.connect(lambda: self.packetCaptured.emit()) #connect the signal to gui to update the packet list when timer elapses
+        self.updateTimer.timeout.connect(lambda: self.packetCaptured.emit(packetBuffer)) #connect the signal to gui to update the packet list when timer elapses
         self.updateTimer.start(2000) #setting the timer to elapse every 2 seconds (can adjust according to the load)
 
 
@@ -811,17 +815,25 @@ class PacketCaptureThread(QThread):
                 handledPacket = handler(packet) #call handler method of each packet
                 if handledPacket != None: #check if its not none
                     self.packetQueue.put(handledPacket.info()) #we put the packet's info in the queue for later use 
-                break
-        #else:
-        #    print(f'Unknown Packet Type --> {packet.summary()}') #print summary of the packet
+                break #break from the loop when handled the packet
 
 
     #run method for the thread, initialzie the scan, call scapy sniff method with necessary parameters
     def run(self):
-        if self.interface is not None: #if interface is specified we call sniff with desired interface
-            sniff(iface=self.interface, prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
-        else: #else we initiate the sniff with default network interface
-            sniff(prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
+        self.setGUIState.emit(False) #set GUI elements to be unclickable for scan
+        if self.packetList is not None: #if true we received a packet list meaning we need to load scan from pcap file
+            for packet in self.packetList: #iterate through the packet list 
+                self.PacketCapture(packet) #call packetCapture method for each packet in list
+            while not self.packetQueue.empty(): #now we keep thread alive until all packets were loaded
+                if self.packetQueue.empty(): #if true the queue is empty so we can finish
+                    break #break the loop to end loading
+                QThread.sleep(2) #we give the thread to sleep for 2 seconds for gui responsiveness
+        else: #else we need to start a regular scan 
+            if self.interface is not None: #if interface is specified we call sniff with desired interface
+                sniff(iface=self.interface, prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
+            else: #else we initiate the sniff with default network interface
+                sniff(prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
+        self.setGUIState.emit(True) #after thread finishes we set the GUI elements to be clickable again
 
 #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
     
@@ -847,8 +859,9 @@ class PacketSniffer(QMainWindow):
         self.setWindowIcon(QIcon('images/serpent.ico')) #set icon of window
         self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
         self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
+        self.LoadScanButton.clicked.connect(self.LoadScanClicked) #add method to handle load scan button
         self.ClearButton.clicked.connect(self.ClearClicked) #add method to handle clear button 
-        self.SaveScanButton.clicked.connect(self.saveScan) #add method to handle save scan button
+        self.SaveScanButton.clicked.connect(self.SaveScanClicked) #add method to handle save scan button
         self.PacketList.doubleClicked.connect(self.handleItemDoubleClicked) #add method to handle clicks on the items in packet list
         self.setLineEditValidate() #call the method to set the validators for the QLineEdit for port and ip
         self.IPLineEdit.textChanged.connect(self.checkIPValidity) #connect signal for textChanged for IP to determine its validity
@@ -868,7 +881,6 @@ class PacketSniffer(QMainWindow):
     #method to check the IP Line edit validity in gui (using signals)
     def checkIPValidity(self):
         ip = self.IPLineEdit.text().strip() #get the ip user entered in gui
-
         if ip: #if ip is set, we check
             octets = ip.split('.') #splite the ip into 4 octets
             self.validIp = (len(octets) == 4 and all(o.isdigit() and 0 <= int(o) <= 255 for o in octets))  #check if ip is valid and not missing numbers (e.g 192.168.1.1)
@@ -902,7 +914,23 @@ class PacketSniffer(QMainWindow):
             self.InterfaceComboBox.addItems(interfaces) #add items to combobox
         if len(interfaces) >= 2: #if we have more then one available interface 
             self.InterfaceComboBox.addItem('All') #we add "All" option to scan all available interfaces
-            
+    
+    
+    #method that return desktop directory if available, else the home directory
+    def getDirectory(self):
+        defaultDirectory = os.path.join(os.path.expanduser('~'), 'Desktop') #set default directory to be desktop 
+        if not os.path.exists(defaultDirectory): #if desktop directory isn't available we set it to home directory
+            defaultDirectory = os.path.expanduser('~') #setting the default directory to be home directory
+        return defaultDirectory
+
+
+    #method for initialize the packet thread
+    def initPacketThread(self, packetFilter, PortAndIP, interface=None, packetList=None):
+        self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP, interface, packetList) #initialzie the packet thread with the queue we initialized and interface
+        self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
+        self.packetCaptureThread.setGUIState.connect(self.handleGUIState) #connect the packet thread to handleGUIState method
+        self.packetCaptureThread.start() #calling the run method of the thread to start the scan    
+
 
     #method to handle the start scan button, initializing the packet sniffing
     def StartScanClicked(self):
@@ -916,41 +944,33 @@ class PacketSniffer(QMainWindow):
                 CustomMessageBox(title, str(e), icon)
                 return #stop the initialization of scan
             self.ClearClicked() #call clear method for clearing the memory and screen for new scan
-            self.handleCheckBoxes(False) #call our method for disabling the checkboxes
             interface = self.InterfaceComboBox.currentText() #get the chosen network interface from combobox
             if interface == '': #if the input is empty it means no availabe interface found
                 CustomMessageBox('No Available Interface', 'Cannot find available network interface.', 'Critical', False) #show error message
                 return #stop the initialization of scan
             if interface != 'All': #if true it means we need to scan on a specific interface
-                self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP, interface) #initialzie the packet thread with the queue we initialized and interface
+                self.initPacketThread(packetFilter, PortAndIP, interface) #initialzie the packet thread
             else: #else user chose "All" option so we scan all available network interfaces
-                self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP) #initialzie the packet thread without specifing a interface, we scan all interfaces
-            self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
-            self.packetCaptureThread.start() #calling the run method of the thread to start the scan
+                self.initPacketThread(packetFilter, PortAndIP) #initialzie the packet thread without specifing a interface, we scan all interfaces
             self.StartScanButton.setEnabled(False) #set the scan button to be unclickable while scan in progress
         else: #else we show error message
-            CustomMessageBox('Scan Running', 'Scan is already running!', 'Information', False)
+            CustomMessageBox('Scan Running', 'Scan in progress!', 'Warning', False)
 
 
     #method to handle the stop scan button, stops the packet sniffing
     def StopScanClicked(self):
         if self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #checks if there is a running thread
             self.packetCaptureThread.stop() #calls stop method of the thread 
-            self.packetCaptureThread.exit() #kills the thread 
             self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan 
-            self.handleCheckBoxes(True) #set the checkboxes to be enabled again
             self.StartScanButton.setEnabled(True) #set scan button back to being clickable
             CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False)
     
     
     #method for saving scan data into a text file
-    def saveScan(self):
+    def SaveScanClicked(self):
         #if packet dictionary isn't empty and if there's no scan in progress we open the save window
         if any(packetDictionary.values()) and self.packetCaptureThread is None:
-            defaultDirectory = os.path.join(os.path.expanduser('~'), 'Desktop') #set default directory to be desktop 
-            if not os.path.exists(defaultDirectory): #if desktop directory isn't available we set it to home directory
-                defaultDirectory = os.path.expanduser('~') #setting the default directory to be home directory
-            defaultFilePath = os.path.join(defaultDirectory, 'Packet Scan') #we set the default file name, user can change that in dialog
+            defaultFilePath = os.path.join(self.getDirectory(), 'Packet Scan') #we set the default file name, user can change that in dialog
             options = QFileDialog.Options() #this is for file options
             filePath, _ = QFileDialog.getSaveFileName(self, 'Save Scan Data', defaultFilePath, 'Text File (*.txt);;PCAP File (*.pcap)', options=options) #save the file in a specific path
             if filePath: #if user chose valid path we continue
@@ -971,9 +991,34 @@ class PacketSniffer(QMainWindow):
             else: #else user didnt specify a file path
                 CustomMessageBox('Save Error', 'You must choose a file type for saving!', 'Critical', False) #show message box with error
         elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #if scan in progress we notify the user
-            CustomMessageBox('Scan In Progress', 'Cannot save scan while in progress!', 'Information', False)
+            CustomMessageBox('Scan In Progress', 'Cannot save scan while scan in progress!', 'Warning', False)
         else: #else we show a "saved denied" error if something happend
             CustomMessageBox('Save Denied', 'No scan data to save.', 'Information', False)
+
+    
+    #method to handle loading pcap file scan data to interface
+    def LoadScanClicked(self):
+        if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning(): #if there's no scan in progress we can load pcap file
+            try:
+                packetFilter = self.packetFilter() #call packet filter for filtered dictionary based on check boxes state
+                PortAndIP = self.getPortIP() #call the getPortId method to recevie the input for port and ip from user
+            except (Exception, ValueError) as e: #if an exception is raised we show a messagebox for user with the error
+                title = 'Format Error' if not self.validIp else 'Type Error'
+                icon = 'Warning' if title == 'Format Error' else 'Critical'
+                CustomMessageBox(title, str(e), icon)
+                return #stop the loading of pcap file
+            options = QFileDialog.Options() #this is for file options
+            options |= QFileDialog.ReadOnly #making the files read only so user wont be able to edit files while choosing a file
+            filePath, _ = QFileDialog.getOpenFileName(self, 'Choose PCAP File', self.getDirectory(), 'PCAP File (*.pcap)', options=options) #load the pcap file from a specific path
+            if filePath: #if the file path is valid we proceed
+                self.ClearClicked() #call clear method 
+                packetList = rdpcap(filePath) #read all the content of the pcap file and save in variable
+                self.initPacketThread(packetFilter, PortAndIP, None, packetList) #initialize the packet thread with packetList
+                CustomMessageBox('Load Successful', 'Loaded PCAP file successfully, loading data to interface...', 'Information', True) #notify the user for success
+            else: #else user didn't specify a file path
+                CustomMessageBox('Load Error', 'You must choose a PCAP file to load!', 'Critical', False) #show message box with error
+        else: #else we show error message
+            CustomMessageBox('Scan Running', 'Scan in progress, cannot load file.', 'Warning', False)    
 
 
     def ClearClicked(self):
@@ -1057,8 +1102,8 @@ class PacketSniffer(QMainWindow):
 
 
     #method for updating the packet list
-    def updatePacketList(self):
-        buffer = min(self.packetQueue.qsize(), 100) #buffer for the amount of packets to add at a time, min betweenn queue size and 100 packets
+    def updatePacketList(self, maxSize=100):
+        buffer = min(self.packetQueue.qsize(), maxSize) #buffer for the amount of packets to add at a time, min between queue size and maxSize value
         if self.packetCaptureThread != None and not self.packetQueue.empty(): #we add packets when queue if not empty 
             while buffer > 0: #add the packets to packet list while buffer isn't empty 
                 packetInfo = self.packetQueue.get() #taking a packet from the queue
@@ -1076,7 +1121,7 @@ class PacketSniffer(QMainWindow):
     
     
     #method to handle state of checkboxes, if state false we disable them, otherwise we enable them
-    def handleCheckBoxes(self, state):
+    def handleGUIState(self, state):
         if state: #if true we set the checkboxes and ip/port line edit to be enabled
             self.HTTPCheckBox.setEnabled(True)
             self.TLSCheckBox.setEnabled(True)
