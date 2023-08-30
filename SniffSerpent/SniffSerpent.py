@@ -63,10 +63,10 @@ class Default_Packet(ABC): #abstarct class for default packet
         if info is not None: #if info not none we continue
             if isinstance(info, bytes): #if given info is byte we convert it to utf-8 string
                 info = info.decode('utf-8', errors='replace') #decode the byte to string
-            if len(info) >= 46: #if the string is longer then specified length we add a new line
-                temp = '\n'.join(info[i:i+46] for i in range(0, len(info), 46)) #iterating over the string and adding new line after specified amount of characters
+            if len(info) >= 47: #if the string is longer then specified length we add a new line
+                temp = '\n'.join(info[i:i+47] for i in range(0, len(info), 47)) #iterating over the string and adding new line after specified amount of characters
                 output += f'{st}\n{temp}\n\n' #insert to the output 
-            elif len(f'{st}: {info}') >=46: #if the info string and st string togther exceed the specified characters we add new line
+            elif len(f'{st}: {info}') >= 47: #if the info string and st string togther exceed the specified characters we add new line
                 output += f'{st}\n{info}\n\n' #insert to the output
             else: #else info and st strings are not exceeding the specifed amount of characters
                 output += f'{st} {info}\n\n' #we add the original info and st strings to the output without a new line
@@ -212,14 +212,10 @@ class TCP_Packet(Default_Packet):
         output += temp.rstrip(', ') #finally insert the flags to output 
         output += '\n\n'
         if self.packet[self.packetType].options: #add TCP Options (if available)
-            temp = '' #initializing temp to an empty string
-            count = 0 #counter for tcp options
             output += 'TCP Options:\n' #insert the tcp options to output
+            temp = '' #initializing temp to an empty string
             for option in self.packet[self.packetType].options: #iteration over the options list
-                if count == 4 or option[0] == 'SAck': #for clean gui representation we add new line if count is 4 or SAck option available
-                    temp += '\n' #add new line
                 temp += f'{option[0]}: {option[1]}, ' #add the options to temp
-                count += 1 #icrease the counter
             output += temp.rstrip(', ') #strip the output for leading comma
             output += '\n\n'
         return output
@@ -434,13 +430,13 @@ class ICMP_Packet(Default_Packet):
     #method for packet information
     def moreInfo(self): 
         output = ''
-        output += self.ipInfo() #call ip method for more ip info
         if ICMP in self.packet: #if packet has icmp layer
             icmpType = self.icmpTypes[self.packet[ICMP].type] if self.packet[ICMP].type in self.icmpTypes else None #represents icmp type based onn the icmpTypes dictionary
             icmpCode = self.packet[ICMP].code #represents icmp code
             icmpSeq = self.packet[ICMP].seq #represents icmp sequence number
             icmpId = self.packet[ICMP].id #represents icmp identifier
             output += f'{self.name} Packet:\n\n' #add packet name to output
+            output += self.ipInfo() #call ip method for more ip info
             output += f'Type: {icmpType}\n\n' #add icmp type to output
             output += f'Code: {icmpCode}\n\n' #add icmp code to output
             output += f'Sequence Number: {icmpSeq}\n\n' #add icmp sequence number
@@ -487,7 +483,7 @@ class DHCP_Packet(Default_Packet):
                 output += f'Server ID: {serverID}\n\n' if dhcpPacket.options[0][1] == 3 and serverID else '' #add server id to output
                 output += f'Requested Address: {requestedAddress}\n\n' if requestedAddress else '' #add requested addresses to outpit
                 output += f'Vendor Class ID: {vendorClassID}\n\n' if vendorClassID else '' #add vendor class id to output
-                output += self.fitStr('Parameter Request list:', paramReqList) if paramReqList else '' #add parameter request list to output
+                output += self.fitStr('Parameter Request list:', ', '.join(map(str, paramReqList))) if paramReqList else '' #add parameter request list to output
             elif dhcpPacket.options[0][1] == 2 or dhcpPacket.options[0][1] == 5: #if true its a offer/aknowledge DHCP packet
                 subnetMask = self.getOption('subnet_mask') #get subnet mask from options
                 broadcastAddress = self.getOption('broadcast_address') #get boradcast address from options
@@ -644,7 +640,7 @@ def GetAvailableInterfaces():
         print('Available network interfaces:')
         i = 1 #counter for the interfaces 
         for interface in interfaces: #print all availabe interfaces
-            if sys.platform == 'win32': #if ran on windows we convert the guid number
+            if sys.platform.startswith('win32'): #if ran on windows we convert the guid number
                 print(f'{i}. {guidToStr(interface)}')
             else: #else we are on other os so we print the interface 
                 print(f'{i}. {interface}')
@@ -659,6 +655,7 @@ def guidToStr(guid):
         from scapy.arch.windows import get_windows_if_list
     except ImportError as e: #we catch an import error if occurred
         print(f'Error importing module: {e}') #print the error
+        return None #we exit the function
     interfaces = get_windows_if_list() #use the windows method to get list of guid number interfaces
     for interface in interfaces: #iterating over the list of interfaces
         if interface['guid'] == guid: #we find the matching guid number interface
@@ -670,7 +667,7 @@ def guidToStr(guid):
 def getNetworkInterfaces():
     networkNames = ['eth', 'wlan', 'en', 'Ethernet', 'Wi-Fi'] #this list represents the usual network interfaces that are available in various platfroms
     interfaces = get_if_list() #get a list of the network interfaces
-    if sys.platform == 'win32': #if current os is Windows we convert the guid number to interface name
+    if sys.platform.startswith('win32'): #if current os is Windows we convert the guid number to interface name
         temp = [guidToStr(interface) for interface in interfaces if guidToStr(interface) is not None] #get a new list of network interfaces with correct names instead of guid numbers
         interfaces = temp #assign the new list to our interfaces variable
     matchedInterfaces = [interface for interface in interfaces if any(interface.startswith(name) for name in networkNames)] #we filter the list to retrieving ethernet and wifi interfaces
@@ -777,14 +774,15 @@ packetCounter = 0 #global counter for dictionary elements
 class PacketCaptureThread(QThread):
     packetCaptured = pyqtSignal(int) #signal for the thread to update the main for changes
     setGUIState = pyqtSignal(bool) #signal for the thread to set the GUI elements from the main window
-    interface = None #inerface of network 
+    permissionError = pyqtSignal() #signal for permission error to tell GUI to show messagebox for error
+    interface = None #interface of network 
     packetQueue = None #packet queue pointer for the thread
     packetFilter = None #represents the packet type filter for sniffer
     PortandIp = None #string that represents port and ip for sniffer to filter with
     packetList = None #packet list for loading scan with pcap file
     stopCapture = False #flag for capture status
 
-    def __init__(self, packetQueue, packetFilter, PortandIp, interface=None, packetList=None):
+    def __init__(self, packetQueue, packetFilter, PortandIp, interface='', packetList=None):
         super(PacketCaptureThread, self).__init__()
         self.interface = interface #initialize the network interface if given
         self.packetQueue = packetQueue #setting the packetQueue from the packet sniffer class
@@ -828,11 +826,14 @@ class PacketCaptureThread(QThread):
                 if self.packetQueue.empty(): #if true the queue is empty so we can finish
                     break #break the loop to end loading
                 QThread.sleep(2) #we give the thread to sleep for 2 seconds for gui responsiveness
-        else: #else we need to start a regular scan 
-            if self.interface is not None: #if interface is specified we call sniff with desired interface
+        else: #else we need to start a regular scan
+            try: #we call sniff with desired interface and filters for port and ip
                 sniff(iface=self.interface, prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
-            else: #else we initiate the sniff with default network interface
-                sniff(prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
+            except PermissionError: #if user didn't run in administrative privileges we emit signal to show messagebox with error
+                self.permissionError.emit() #emit a signal to GUI to show permission error message box
+                print('Permission denied. Please run again with administrative privileges.') #print permission error message in terminal
+            except Exception as e: #we catch an exception if something happend while sniffing
+                print(f'An error occurred while sniffing: {e}') #print error message in terminal
         self.setGUIState.emit(True) #after thread finishes we set the GUI elements to be clickable again
 
 #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
@@ -919,16 +920,27 @@ class PacketSniffer(QMainWindow):
     #method that return desktop directory if available, else the home directory
     def getDirectory(self):
         defaultDirectory = os.path.join(os.path.expanduser('~'), 'Desktop') #set default directory to be desktop 
-        if not os.path.exists(defaultDirectory): #if desktop directory isn't available we set it to home directory
-            defaultDirectory = os.path.expanduser('~') #setting the default directory to be home directory
+        if not os.path.exists(defaultDirectory): #if desktop directory isn't available we try specific os paths
+            if sys.platform.startswith('darwin'):  #if os is macOS
+                defaultDirectory = os.path.join(os.path.join('/Users/', os.getlogin()), 'Desktop') #set macOS specific desktop path
+            elif sys.platform.startswith('linux'):  #if os is Linux
+                defaultDirectory = os.path.join(os.path.join('/home/', os.getlogin()), 'Desktop') #set Linux specific desktop path
+            else: #else we set the default directory to home directory
+                defaultDirectory = os.path.expanduser('~') #setting the default directory to be home directory
         return defaultDirectory
+
+    
+    #method for sniff method for permission error exceptions
+    def sniffErrorMessageBox(self):
+        CustomMessageBox('Permission Denied', 'Sniffing unavailable, please run again with administrative privileges.', 'Critical', True) #show permission error message box
 
 
     #method for initialize the packet thread
-    def initPacketThread(self, packetFilter, PortAndIP, interface=None, packetList=None):
+    def initPacketThread(self, packetFilter, PortAndIP, interface='', packetList=None):
         self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP, interface, packetList) #initialzie the packet thread with the queue we initialized and interface
         self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
         self.packetCaptureThread.setGUIState.connect(self.handleGUIState) #connect the packet thread to handleGUIState method
+        self.packetCaptureThread.permissionError.connect(self.sniffErrorMessageBox) #connnect the packet thread to sniffErrorMessageBox method
         self.packetCaptureThread.start() #calling the run method of the thread to start the scan    
 
 
@@ -941,12 +953,12 @@ class PacketSniffer(QMainWindow):
             except (Exception, ValueError) as e: #if an exception is raised we show a messagebox for user with the error
                 title = 'Format Error' if not self.validIp else 'Type Error'
                 icon = 'Warning' if title == 'Format Error' else 'Critical'
-                CustomMessageBox(title, str(e), icon)
+                CustomMessageBox(title, str(e), icon) #show error message box
                 return #stop the initialization of scan
             self.ClearClicked() #call clear method for clearing the memory and screen for new scan
             interface = self.InterfaceComboBox.currentText() #get the chosen network interface from combobox
             if interface == '': #if the input is empty it means no availabe interface found
-                CustomMessageBox('No Available Interface', 'Cannot find available network interface.', 'Critical', False) #show error message
+                CustomMessageBox('No Available Interface', 'Cannot find available network interface.', 'Critical', False) #show error message box
                 return #stop the initialization of scan
             if interface != 'All': #if true it means we need to scan on a specific interface
                 self.initPacketThread(packetFilter, PortAndIP, interface) #initialzie the packet thread
@@ -954,7 +966,7 @@ class PacketSniffer(QMainWindow):
                 self.initPacketThread(packetFilter, PortAndIP) #initialzie the packet thread without specifing a interface, we scan all interfaces
             self.StartScanButton.setEnabled(False) #set the scan button to be unclickable while scan in progress
         else: #else we show error message
-            CustomMessageBox('Scan Running', 'Scan in progress!', 'Warning', False)
+            CustomMessageBox('Scan Running', 'Scan in progress!', 'Warning', False) #show error message box
 
 
     #method to handle the stop scan button, stops the packet sniffing
@@ -969,31 +981,32 @@ class PacketSniffer(QMainWindow):
     #method for saving scan data into a text file
     def SaveScanClicked(self):
         #if packet dictionary isn't empty and if there's no scan in progress we open the save window
-        if any(packetDictionary.values()) and self.packetCaptureThread is None:
+        if any(packetDictionary.values()) and (self.packetCaptureThread is None or not self.packetCaptureThread.isRunning()):
             defaultFilePath = os.path.join(self.getDirectory(), 'Packet Scan') #we set the default file name, user can change that in dialog
             options = QFileDialog.Options() #this is for file options
-            filePath, _ = QFileDialog.getSaveFileName(self, 'Save Scan Data', defaultFilePath, 'Text File (*.txt);;PCAP File (*.pcap)', options=options) #save the file in a specific path
+            filePath, fileType = QFileDialog.getSaveFileName(self, 'Save Scan Data', defaultFilePath, 'Text File (*.txt);;PCAP File (*.pcap)', options=options) #save the file in a specific path
             if filePath: #if user chose valid path we continue
+                filePath, _ = os.path.splitext(filePath) #remove extension if added during getSaveFileName method
                 try: 
-                    if filePath.endswith('.pcap'): #means user chose pcap file
+                    if fileType == 'PCAP File (*.pcap)': #means user chose pcap file
                         packetList = [packet.getPacket() for packet in packetDictionary.values()] #we convert the packet dictionary to list for scapy wrpcap method
-                        wrpcap(filePath, packetList) #call wrpcap method to write the captured packets into pcap file
+                        wrpcap(filePath + '.pcap', packetList) #call wrpcap method to write the captured packets into pcap file
                         CustomMessageBox('Scan Saved', 'Saved scan detalis to PCAP file.', 'Information', False) #notify the user for success
                     else: #else user chose a txt file
-                        with open(filePath, 'w') as file: #we open the file for writing
+                        with open(filePath + '.txt', 'w') as file: #we open the file for writing
                             for packet in packetDictionary.values(): #iterating over the packet dictionary to extract the info 
                                 file.write('------------------------------------------------------------------------------------\n\n')
                                 file.write(packet.moreInfo()) #write the packet info to the file (extended information)
                                 file.write('------------------------------------------------------------------------------------\n\n')
                             CustomMessageBox('Scan Saved', 'Saved scan detalis to text file.', 'Information', False) #notify the user for success
                 except Exception as e: #if error happend we print the error to terminal
-                    print(f"Error occurred while saving: {e}")
+                    print(f'Error occurred while saving: {e}')
             else: #else user didnt specify a file path
-                CustomMessageBox('Save Error', 'You must choose a file type for saving!', 'Critical', False) #show message box with error
+                CustomMessageBox('Save Error', 'You must choose a file type for saving!', 'Critical', False) #show error message box
         elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #if scan in progress we notify the user
-            CustomMessageBox('Scan In Progress', 'Cannot save scan while scan in progress!', 'Warning', False)
+            CustomMessageBox('Scan In Progress', 'Cannot save scan while scan in progress!', 'Warning', False) #show error message box  
         else: #else we show a "saved denied" error if something happend
-            CustomMessageBox('Save Denied', 'No scan data to save.', 'Information', False)
+            CustomMessageBox('Save Denied', 'No scan data to save.', 'Information', False) #show error message box
 
     
     #method to handle loading pcap file scan data to interface
@@ -1005,20 +1018,20 @@ class PacketSniffer(QMainWindow):
             except (Exception, ValueError) as e: #if an exception is raised we show a messagebox for user with the error
                 title = 'Format Error' if not self.validIp else 'Type Error'
                 icon = 'Warning' if title == 'Format Error' else 'Critical'
-                CustomMessageBox(title, str(e), icon)
+                CustomMessageBox(title, str(e), icon) #show error message box
                 return #stop the loading of pcap file
             options = QFileDialog.Options() #this is for file options
             options |= QFileDialog.ReadOnly #making the files read only so user wont be able to edit files while choosing a file
-            filePath, _ = QFileDialog.getOpenFileName(self, 'Choose PCAP File', self.getDirectory(), 'PCAP File (*.pcap)', options=options) #load the pcap file from a specific path
-            if filePath: #if the file path is valid we proceed
+            filePath, fileType = QFileDialog.getOpenFileName(self, 'Choose PCAP File', self.getDirectory(), 'PCAP File (*.pcap)', options=options) #load the pcap file from a specific path
+            if filePath and fileType == 'PCAP File (*.pcap)': #if the file path is valid we proceed and the type is pcap
                 self.ClearClicked() #call clear method 
                 packetList = rdpcap(filePath) #read all the content of the pcap file and save in variable
                 self.initPacketThread(packetFilter, PortAndIP, None, packetList) #initialize the packet thread with packetList
                 CustomMessageBox('Load Successful', 'Loaded PCAP file successfully, loading data to interface...', 'Information', True) #notify the user for success
             else: #else user didn't specify a file path
-                CustomMessageBox('Load Error', 'You must choose a PCAP file to load!', 'Critical', False) #show message box with error
+                CustomMessageBox('Load Error', 'You must choose a PCAP file to load!', 'Critical', False) #show error message box 
         else: #else we show error message
-            CustomMessageBox('Scan Running', 'Scan in progress, cannot load file.', 'Warning', False)    
+            CustomMessageBox('Scan Running', 'Scan in progress, cannot load file.', 'Warning', False) #show error message box
 
 
     def ClearClicked(self):
@@ -1031,7 +1044,7 @@ class PacketSniffer(QMainWindow):
             self.PacketList.model().clear() #clear the packet list in GUI
             self.MoreInfoTextEdit.setText('') #clear the extended information in GUI
         elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning():
-            CustomMessageBox('Thread Running Error', 'Cannot clear while scan is in progress!', 'Warning', False)
+            CustomMessageBox('Thread Running Error', 'Cannot clear while scan is in progress!', 'Warning', False) #show error message box
         
 
     #method that checks all the check boxs state, return a string with filtered packets
