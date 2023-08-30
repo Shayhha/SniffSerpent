@@ -63,10 +63,10 @@ class Default_Packet(ABC): #abstarct class for default packet
         if info is not None: #if info not none we continue
             if isinstance(info, bytes): #if given info is byte we convert it to utf-8 string
                 info = info.decode('utf-8', errors='replace') #decode the byte to string
-            if len(info) >= 47: #if the string is longer then specified length we add a new line
-                temp = '\n'.join(info[i:i+47] for i in range(0, len(info), 47)) #iterating over the string and adding new line after specified amount of characters
+            if len(info) >= 46: #if the string is longer then specified length we add a new line
+                temp = '\n'.join(info[i:i+46] for i in range(0, len(info), 46)) #iterating over the string and adding new line after specified amount of characters
                 output += f'{st}\n{temp}\n\n' #insert to the output 
-            elif len(f'{st}: {info}') >= 47: #if the info string and st string togther exceed the specified characters we add new line
+            elif len(f'{st}: {info}') >= 46: #if the info string and st string togther exceed the specified characters we add new line
                 output += f'{st}\n{info}\n\n' #insert to the output
             else: #else info and st strings are not exceeding the specifed amount of characters
                 output += f'{st} {info}\n\n' #we add the original info and st strings to the output without a new line
