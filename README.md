@@ -74,7 +74,9 @@ pip install pyqt5
 pip install scapy
 ```
 
-**Important:** On Windows based systems  [Npcap](https://npcap.com/#download) must be installed to enable packet analysis and capturing.
+**Important** 
+- On Windows based systems [Npcap](https://npcap.com/#download) must be installed to enable packet analysis and capturing.
+- On Linux and macOS you have to run the application with administrative privileges to enable packet analysis and capturing.
 
 ## Contact
 
