@@ -933,7 +933,7 @@ class PacketSniffer(QMainWindow):
     #method for sniff method for permission error exceptions
     def sniffErrorMessageBox(self):
         CustomMessageBox('Permission Denied', 'Sniffing unavailable, please run again with administrative privileges.', 'Critical', True) #show permission error message box
-
+        sys.exit(1) #exit the program due to insufficient privileges
 
     #method for initialize the packet thread
     def initPacketThread(self, packetFilter, PortAndIP, interface='', packetList=None):
