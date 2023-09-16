@@ -86,6 +86,6 @@ For questions or feedback, please contact [shayhha@gmail.com](mailto:shayhha@gma
 
 ## License
 
-SniffSerpent is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+SniffSerpent is licensed under the MIT License - see the [LICENSE](LICENSE.txt) file for details.
 
 © All rights reserved to Shayhha (Shay Hahiashvili).
