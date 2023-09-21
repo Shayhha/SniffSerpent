@@ -888,10 +888,10 @@ class PacketSniffer(QMainWindow):
         else: #else ip is empty so its not specified by user (optional)
             self.validIp = True #set the validIp flag to true
         if self.validIp: #if ip is valid we set the default style of the edit line lable
-            style = "background-color: rgba(247, 247, 247,150); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: black;	padding: 4px;"
+            style = "background-color: rgba(32,33,35,255); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: black;	padding: 4px;"
             self.IPLineEdit.setStyleSheet(style)
         else: #else the user input is invalid, we show a red border on the edit line lable for error indication
-            style = "background-color: rgba(247, 247, 247,150); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: red; padding: 4px;"
+            style = "background-color: rgba(32,33,35,255); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: rgb(139,0,0); padding: 4px;"
             self.IPLineEdit.setStyleSheet(style)
     
 
@@ -1213,7 +1213,8 @@ class CustomMessageBox(QDialog):
         layout.addWidget(OKButton, alignment=Qt.AlignCenter) #add the button to the layout
         style = """
             QPushButton {
-                background-color: rgb(123, 180, 255);
+                background-color: rgba(32,33,35,255);
+                color: rgb(245,245,245);
                 border: 2px solid black;
                 border-radius: 15px;
                 padding: 4px;
@@ -1223,10 +1224,10 @@ class CustomMessageBox(QDialog):
                 min-height: 20px;
             }
             QPushButton:hover {
-                background-color: rgb(171, 201, 255);
+                background-color: rgb(87, 89, 101);
             }
             QPushButton:pressed {
-                background-color: rgb(96, 141, 199);
+                background-color: rgb(177, 185, 187);
             }
         """
         OKButton.setStyleSheet(style) #set stylesheet for the OK button

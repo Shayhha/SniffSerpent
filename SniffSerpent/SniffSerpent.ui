@@ -2,12 +2,15 @@
 <ui version="4.0">
  <class>SniffSerpent</class>
  <widget class="QMainWindow" name="SniffSerpent">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>1570</width>
-    <height>850</height>
+    <height>872</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -19,7 +22,7 @@
   <property name="maximumSize">
    <size>
     <width>1570</width>
-    <height>850</height>
+    <height>16777215</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -27,39 +30,53 @@
   </property>
   <property name="styleSheet">
    <string notr="true">QWidget {
-	background-color: qlineargradient(spread:pad, x1:0.522364, y1:0.136, x2:0.522, y2:1, stop:0 rgba(26,112,190, 255), stop:1 rgba(181,212,240, 255));
+	background-color: rgba(68,70,84,255);
+    color: rgb(245,245,245);
 }
 
 QScrollBar:vertical {
-            border: 0px solid #999999;
-            background:  rgba(247, 247, 247,150);
-            width:10px;    
-            margin: 0px 0px 0px 0px;
-        }
-        QScrollBar::handle:vertical {         
-       
-            min-height: 100px;
-          	border: 0px solid red;
-			border-radius: 4px;
-			background-color: black;
-        }
-        QScrollBar::add-line:vertical {       
-            height: 0px;
-            subcontrol-position: bottom;
-            subcontrol-origin: margin;
-        }
-        QScrollBar::sub-line:vertical {
-            height: 0 px;
-            subcontrol-position: top;
-            subcontrol-origin: margin;
-        }</string>
+    background-color: rgba(247, 247, 247,150);
+    border: 0px solid rgb(153, 153, 153);
+    width:10px;    
+    margin: 0px 0px 0px 0px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical {          
+    background-color: black;   
+    min-height: 100px;
+    border: 0px solid black;
+    border-radius: 4px;
+}
+
+QScrollBar::add-line:vertical {       
+    height: 0px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:vertical {
+    height: 0px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+
+QListView::item:hover { 
+   background-color: rgb(187, 188, 196);
+   color:black;
+}
+
+QListView::item:selected { 
+   background-color: rgb(173, 174, 184);
+   color:black;
+}</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QListView" name="PacketList">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>50</y>
+      <y>70</y>
       <width>1021</width>
       <height>551</height>
      </rect>
@@ -86,13 +103,15 @@ QScrollBar:vertical {
      <cursorShape>ArrowCursor</cursorShape>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgba(247, 247, 247,130);
+     <string notr="true">background-color: rgba(191, 191, 191, 0.6);
+color: black;
 border-radius: 15px;
 border-style: outset;
 border-width: 2px;
 border-radius: 15px;
 border-color: black;	
-padding: 4px;</string>
+padding: 4px;
+</string>
     </property>
     <property name="verticalScrollBarPolicy">
      <enum>Qt::ScrollBarAlwaysOn</enum>
@@ -111,14 +130,14 @@ padding: 4px;</string>
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>610</y>
+      <y>630</y>
       <width>1021</width>
       <height>231</height>
      </rect>
     </property>
     <property name="styleSheet">
      <string notr="true">#OptionsFrame {
-	background-color:rgba(219, 228, 255,100);
+	background-color: rgba(46, 47, 56,0.8);
 	border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -173,7 +192,7 @@ border: none;</string>
     <widget class="QCheckBox" name="UDPCheckBox">
      <property name="geometry">
       <rect>
-       <x>219</x>
+       <x>218</x>
        <y>110</y>
        <width>60</width>
        <height>39</height>
@@ -346,7 +365,7 @@ border: none;</string>
      </property>
      <property name="geometry">
       <rect>
-       <x>145</x>
+       <x>146</x>
        <y>110</y>
        <width>60</width>
        <height>39</height>
@@ -378,6 +397,9 @@ border: none;</string>
      </property>
     </widget>
     <widget class="QPushButton" name="StartScanButton">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>95</x>
@@ -409,7 +431,7 @@ border: none;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
-    background-color: rgb(123, 180, 255);
+    background-color: rgba(32,33,35,255);
 	border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -419,7 +441,7 @@ border: none;</string>
 }
 
 QPushButton:hover {
-    background-color: rgb(171, 201, 255);
+    background-color: rgb(87, 89, 101);
     border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -429,7 +451,12 @@ QPushButton:hover {
 }
 
 QPushButton:pressed {
-    background-color: rgb(96, 141, 199);
+   background-color:rgb(177, 185, 187);
+}
+
+QPushButton:disabled {
+    background-color:rgb(140, 140, 140);
+    color: black; 
 }</string>
      </property>
      <property name="text">
@@ -468,7 +495,7 @@ QPushButton:pressed {
      </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
-    background-color: rgb(123, 180, 255);
+    background-color: rgba(32,33,35,255);
 	border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -478,7 +505,7 @@ QPushButton:pressed {
 }
 
 QPushButton:hover {
-    background-color: rgb(171, 201, 255);
+    background-color: rgb(87, 89, 101);
     border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -488,7 +515,12 @@ QPushButton:hover {
 }
 
 QPushButton:pressed {
-    background-color: rgb(96, 141, 199);
+   background-color:rgb(177, 185, 187);
+}
+
+QPushButton:disabled {
+    background-color: rgb(140, 140, 140);
+    color: black; 
 }</string>
      </property>
      <property name="text">
@@ -527,7 +559,7 @@ QPushButton:pressed {
      </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
-    background-color: rgb(123, 180, 255);
+    background-color: rgba(32,33,35,255);
 	border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -537,7 +569,7 @@ QPushButton:pressed {
 }
 
 QPushButton:hover {
-    background-color: rgb(171, 201, 255);
+    background-color: rgb(87, 89, 101);
     border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -547,7 +579,12 @@ QPushButton:hover {
 }
 
 QPushButton:pressed {
-    background-color: rgb(96, 141, 199);
+   background-color:rgb(177, 185, 187);
+}
+
+QPushButton:disabled {
+    background-color: rgb(140, 140, 140);
+    color: black; 
 }</string>
      </property>
      <property name="text">
@@ -586,7 +623,7 @@ QPushButton:pressed {
      </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
-    background-color: rgb(123, 180, 255);
+    background-color: rgba(32,33,35,255);
 	border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -596,7 +633,7 @@ QPushButton:pressed {
 }
 
 QPushButton:hover {
-    background-color: rgb(171, 201, 255);
+    background-color: rgb(87, 89, 101);
     border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -606,7 +643,12 @@ QPushButton:hover {
 }
 
 QPushButton:pressed {
-    background-color: rgb(96, 141, 199);
+   background-color:rgb(177, 185, 187);
+}
+
+QPushButton:disabled {
+    background-color: rgb(140, 140, 140);
+    color: black; 
 }</string>
      </property>
      <property name="text">
@@ -643,7 +685,7 @@ QPushButton:pressed {
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgba(247, 247, 247,150);
+      <string notr="true">background-color: rgba(32,33,35,255);
 border-radius: 15px;
 border-style: outset;
 border-width: 2px;
@@ -732,7 +774,7 @@ border: none;</string>
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgba(247, 247, 247,150);
+      <string notr="true">background-color: rgba(32,33,35,255);
 border-radius: 15px;
 border-style: outset;
 border-width: 2px;
@@ -875,7 +917,7 @@ border: none;</string>
       </size>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgba(247, 247, 247,150);
+      <string notr="true">background-color: rgba(32,33,35,255);
 border-radius: 15px;
 border-width: 2px;
 border-radius: 15px;
@@ -935,21 +977,24 @@ padding: 4px;</string>
     border-color: black;	
     padding: 4px;
 }
+
 QComboBox:hover {
     border: 2px solid black
 }
+
 QComboBox QAbstractItemView {
+    background-color:  rgb(245,245,245);
+    selection-background-color: rgb(95, 97, 109);
     color: rgb(0, 0, 0);    
-    background-color: rgb(243, 244, 255);
     padding: 10px;
     border: 2px solid black;
     border-radius: 10px;
     padding-left: 5px;
     padding-right: 5px;
-    selection-background-color: rgb(73, 137, 255);
 }
+
 QComboBox QListView{
-outline: 0px;
+    outline: 0px;
 }</string>
       </property>
      </widget>
@@ -1089,7 +1134,7 @@ border: none;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
-    background-color: rgb(123, 180, 255);
+    background-color: rgba(32,33,35,255);
 	border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -1099,7 +1144,7 @@ border: none;</string>
 }
 
 QPushButton:hover {
-    background-color: rgb(171, 201, 255);
+    background-color: rgb(87, 89, 101);
     border-radius: 15px;
 	border-style: outset;
 	border-width: 2px;
@@ -1109,7 +1154,12 @@ QPushButton:hover {
 }
 
 QPushButton:pressed {
-    background-color: rgb(96, 141, 199);
+   background-color:rgb(177, 185, 187);
+}
+
+QPushButton:disabled {
+    background-color: rgb(140, 140, 140);
+    color: black; 
 }</string>
      </property>
      <property name="text">
@@ -1117,81 +1167,11 @@ QPushButton:pressed {
      </property>
     </widget>
    </widget>
-   <widget class="QLabel" name="ExtendedInformationLabel">
-    <property name="geometry">
-     <rect>
-      <x>1050</x>
-      <y>10</y>
-      <width>300</width>
-      <height>30</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>300</width>
-      <height>30</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>300</width>
-      <height>30</height>
-     </size>
-    </property>
-    <property name="font">
-     <font>
-      <family>Arial</family>
-      <pointsize>20</pointsize>
-     </font>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">background-color:none;</string>
-    </property>
-    <property name="text">
-     <string>Extended Information</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="ScanResultsLabel">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>10</y>
-      <width>200</width>
-      <height>30</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>200</width>
-      <height>30</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>200</width>
-      <height>30</height>
-     </size>
-    </property>
-    <property name="font">
-     <font>
-      <family>Arial</family>
-      <pointsize>20</pointsize>
-      <weight>50</weight>
-      <bold>false</bold>
-     </font>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">background-color:none;</string>
-    </property>
-    <property name="text">
-     <string>Scan Results</string>
-    </property>
-   </widget>
    <widget class="QTextEdit" name="MoreInfoTextEdit">
     <property name="geometry">
      <rect>
       <x>1040</x>
-      <y>50</y>
+      <y>70</y>
       <width>521</width>
       <height>791</height>
      </rect>
@@ -1227,7 +1207,8 @@ QPushButton:pressed {
      <bool>false</bool>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgba(247, 247, 247, 130);
+     <string notr="true">background-color: rgba(191, 191, 191, 0.6);
+color: black;
 border-radius: 15px;
 border-style: outset;
 border-width: 2px;
@@ -1242,6 +1223,147 @@ padding: 4px;</string>
      <bool>true</bool>
     </property>
    </widget>
+   <widget class="QFrame" name="TopFrame">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>1570</width>
+      <height>60</height>
+     </rect>
+    </property>
+    <property name="minimumSize">
+     <size>
+      <width>1570</width>
+      <height>60</height>
+     </size>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>1570</width>
+      <height>60</height>
+     </size>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">background-color:  rgba(32,33,35,255);</string>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+    <widget class="QLabel" name="ScanResultsLabel">
+     <property name="geometry">
+      <rect>
+       <x>90</x>
+       <y>0</y>
+       <width>190</width>
+       <height>60</height>
+      </rect>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>190</width>
+       <height>60</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>190</width>
+       <height>60</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <family>Arial</family>
+       <pointsize>22</pointsize>
+       <weight>50</weight>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color:none;</string>
+     </property>
+     <property name="text">
+      <string>Scan Results</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="ExtendedInformationLabel">
+     <property name="geometry">
+      <rect>
+       <x>1060</x>
+       <y>0</y>
+       <width>290</width>
+       <height>60</height>
+      </rect>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>290</width>
+       <height>60</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>290</width>
+       <height>60</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <family>Arial</family>
+       <pointsize>22</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color:none;</string>
+     </property>
+     <property name="text">
+      <string>Extended Information</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="SerpentImage">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>6</y>
+       <width>65</width>
+       <height>50</height>
+      </rect>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>65</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>65</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <family>Arial</family>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: none</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="pixmap">
+      <pixmap>images/serpentTitle.png</pixmap>
+     </property>
+    </widget>
+   </widget>
+   <zorder>TopFrame</zorder>
+   <zorder>PacketList</zorder>
+   <zorder>OptionsFrame</zorder>
+   <zorder>MoreInfoTextEdit</zorder>
   </widget>
  </widget>
  <resources/>
