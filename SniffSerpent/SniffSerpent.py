@@ -14,7 +14,7 @@ from scapy.contrib.igmp import IGMP
 from scapy.layers.l2 import STP
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import pyqtSignal, Qt, QThread, QTimer, QSize, QRegExp
-from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QRegExpValidator, QIntValidator
+from PyQt5.QtGui import QIcon, QPixmap, QStandardItem, QStandardItemModel, QRegExpValidator, QIntValidator
 from PyQt5.QtWidgets import QApplication, QDesktopWidget, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy, QDialog, QLabel, QPushButton, QStyle, QHBoxLayout, QFileDialog
 from urllib.parse import unquote
 from queue import Queue
@@ -837,7 +837,7 @@ class PacketCaptureThread(QThread):
         self.setGUIState.emit(True) #after thread finishes we set the GUI elements to be clickable again
 
 #--------------------------------------------PacketCaptureThread-END----------------------------------------------#
-    
+
 #---------------------------------------------------Application----------------------------------------------------#
 
 class PacketSniffer(QMainWindow):
@@ -858,11 +858,13 @@ class PacketSniffer(QMainWindow):
     def initUI(self):
         self.setWindowTitle('SniffSerpent') #set title of window
         self.setWindowIcon(QIcon('images/serpent.ico')) #set icon of window
+        infoImageLabel = ImageLabel(1520, 10, 40, 40, 'images/infoTitle.png', True, self) #create a image label for info icon
         self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
         self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
         self.LoadScanButton.clicked.connect(self.LoadScanClicked) #add method to handle load scan button
         self.ClearButton.clicked.connect(self.ClearClicked) #add method to handle clear button 
         self.SaveScanButton.clicked.connect(self.SaveScanClicked) #add method to handle save scan button
+        infoImageLabel.clicked.connect(self.infoImageLabelClicked) #add method to handle clicks on infoImageLabel
         self.PacketList.doubleClicked.connect(self.handleItemDoubleClicked) #add method to handle clicks on the items in packet list
         self.setLineEditValidate() #call the method to set the validators for the QLineEdit for port and ip
         self.IPLineEdit.textChanged.connect(self.checkIPValidity) #connect signal for textChanged for IP to determine its validity
@@ -1047,6 +1049,17 @@ class PacketSniffer(QMainWindow):
             CustomMessageBox('Thread Running Error', 'Cannot clear while scan is in progress!', 'Warning', False) #show error message box
         
 
+    def infoImageLabelClicked(self):
+        sniff_serpent_info = (
+            '\nSniffSerpent is an easy-to-use packet sniffer that allows users to capture packets and analyze network traffic on various interfaces.\n\n'
+            'SniffSerpent supports the following packet types:\n'
+            'TCP, UDP, HTTP, DNS, TLS, ICMP, DHCP, ARP, IGMP, STP.\n\n'
+            'SniffSerpent is licensed under the MIT license, and all rights are reserved to Shay Hahiashvili (Shayhha).\n\n'
+            'GitHub: https://github.com/Shayhha/SniffSerpent\n'
+        )
+        CustomMessageBox('SniffSerpent General Information', sniff_serpent_info, 'NoIcon', 700, 700, False) 
+
+
     #method that checks all the check boxs state, return a string with filtered packets
     def packetFilter(self):
         #check each check box to filter the packet kinds
@@ -1166,6 +1179,35 @@ class PacketSniffer(QMainWindow):
             
 #---------------------------------------------------Application-END----------------------------------------------------#
 
+#------------------------------------------------------ImageLabel------------------------------------------------------#
+class ImageLabel(QLabel):
+    clicked = pyqtSignal() #clicked signal 
+    isClickable = None #flag for indicating if label is clickable
+    
+    def __init__(self, x, y, width, height, pixmapPath, isClickable, parent=None):
+        super().__init__(parent) #call default QLabel ctor
+        self.isClickable = isClickable #set the isClickable flag
+        self.setPixmap(QPixmap(pixmapPath)) #set the path for image 
+        self.setStyleSheet('background-color: none;') #set the backgorund to be transparent
+        self.setGeometry(x, y, width, height) #set the position for label in GUI
+        self.setMouseTracking(True) #set mouse tracking to be enabled
+
+    #method for mouse press event
+    def mousePressEvent(self, event):
+        if self.isClickable:
+            self.clicked.emit() #emit the clicked signal 
+
+    #method for mouse enter event
+    def enterEvent(self, event):
+        if self.isClickable:
+            self.setCursor(Qt.PointingHandCursor) #set the cursor to be pointing hand
+
+    #method for mouse leave event
+    def leaveEvent(self, event):
+        if self.isClickable:
+            self.unsetCursor() #set back cursor to be regualr
+#-----------------------------------------------------ImageLabel-END----------------------------------------------------#
+
 #---------------------------------------------------CustomMessageBox----------------------------------------------------#
 class CustomMessageBox(QDialog):
     def __init__(self, title, text, icon='NoIcon',wordWrap=True, width=400, height=150, parent=None):
@@ -1182,7 +1224,7 @@ class CustomMessageBox(QDialog):
         horizontalLayout = QHBoxLayout() #create new horizontal layout
         textLabel = QLabel(text) #creat a text lable 
         textLabel.setAlignment(Qt.AlignCenter)  #set text alignment to center
-        textLabel.setStyleSheet("font-size: 18px;") #set font size of text
+        textLabel.setStyleSheet('font-size: 18px;') #set font size of text
         textLabel.setWordWrap(self.wordWrap) #set a wordWrap for better text representation
 
         if icon != 'NoIcon': #if true it means we need to set an icon for message box
