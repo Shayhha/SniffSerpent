@@ -890,10 +890,10 @@ class PacketSniffer(QMainWindow):
         else: #else ip is empty so its not specified by user (optional)
             self.validIp = True #set the validIp flag to true
         if self.validIp: #if ip is valid we set the default style of the edit line lable
-            style = "background-color: rgba(32,33,35,255); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: black;	padding: 4px;"
+            style = 'background-color: rgba(32,33,35,255); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: black;	padding: 4px;'
             self.IPLineEdit.setStyleSheet(style)
         else: #else the user input is invalid, we show a red border on the edit line lable for error indication
-            style = "background-color: rgba(32,33,35,255); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: rgb(139,0,0); padding: 4px;"
+            style = 'background-color: rgba(32,33,35,255); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: rgb(139,0,0); padding: 4px;'
             self.IPLineEdit.setStyleSheet(style)
     
 
@@ -1036,6 +1036,7 @@ class PacketSniffer(QMainWindow):
             CustomMessageBox('Scan Running', 'Scan in progress, cannot load file.', 'Warning', False) #show error message box
 
 
+    #method to handle clearing the screen
     def ClearClicked(self):
         global packetDictionary #declare global parameter for clearing packet dictionary
         global packetCounter #declare global parameter for resetting the packet counter
@@ -1048,16 +1049,17 @@ class PacketSniffer(QMainWindow):
         elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning():
             CustomMessageBox('Thread Running Error', 'Cannot clear while scan is in progress!', 'Warning', False) #show error message box
         
-
+    
+    #method that shows information about SniffSerpent 
     def infoImageLabelClicked(self):
-        sniff_serpent_info = (
-            '\nSniffSerpent is an easy-to-use packet sniffer that allows users to capture packets and analyze network traffic on various interfaces.\n\n'
-            'SniffSerpent supports the following packet types:\n'
-            'TCP, UDP, HTTP, DNS, TLS, ICMP, DHCP, ARP, IGMP, STP.\n\n'
-            'SniffSerpent is licensed under the MIT license, and all rights are reserved to Shay Hahiashvili (Shayhha).\n\n'
-            'GitHub: https://github.com/Shayhha/SniffSerpent\n'
+        sniffSerpentInfo = (
+        '<br/>SniffSerpent is an easy to use packet sniffer that allows users to capture packets<br/> on various network interfaces, save packet scans in various file types<br/> as well as load PCAP files for future analysis.<br/><br/>'
+        'SniffSerpent supports the following packet types:<br/>'
+        'TCP, UDP, HTTP, DNS, TLS, ICMP, DHCP, ARP, IGMP, STP.<br/><br/>'
+        'SniffSerpent is licensed under the MIT license, all rights are reserved<br/> to Shay Hahiashvili (Shayhha).<br/><br/>'
+        'For questions or feedback, <a href="https://github.com/Shayhha/SniffSerpent">visit SniffSerpent on GitHub</a>.'
         )
-        CustomMessageBox('SniffSerpent General Information', sniff_serpent_info, 'NoIcon', 700, 700, False) 
+        CustomMessageBox('SniffSerpent General Information', sniffSerpentInfo, 'NoIcon', False, 700, 360) #shows messagebox with info about the application
 
 
     #method that checks all the check boxs state, return a string with filtered packets
@@ -1210,12 +1212,13 @@ class ImageLabel(QLabel):
 
 #---------------------------------------------------CustomMessageBox----------------------------------------------------#
 class CustomMessageBox(QDialog):
-    def __init__(self, title, text, icon='NoIcon',wordWrap=True, width=400, height=150, parent=None):
+    def __init__(self, title, text, icon='NoIcon', wordWrap=True, width=400, height=150, parent=None):
         super().__init__(parent)
         self.setWindowTitle(title) #set the title for message box
         self.setWindowFlags(Qt.Dialog | Qt.WindowTitleHint | Qt.CustomizeWindowHint | Qt.WindowCloseButtonHint) #set the window flags
         self.wordWrap = wordWrap #set the wordWrap for text
         self.setFixedSize(QSize(width, height)) #set the width and height for window
+        self.setStyleSheet('background-color: rgb(245,245,245);') #set backgorund color
         self.initMessageBox(text, icon) #call initMessageBox for initializing the message box
         self.exec_() #execute the message box (show)
 
@@ -1226,7 +1229,8 @@ class CustomMessageBox(QDialog):
         textLabel.setAlignment(Qt.AlignCenter)  #set text alignment to center
         textLabel.setStyleSheet('font-size: 18px;') #set font size of text
         textLabel.setWordWrap(self.wordWrap) #set a wordWrap for better text representation
-
+        textLabel.setOpenExternalLinks(True)  #open links in an external web browser
+            
         if icon != 'NoIcon': #if true it means we need to set an icon for message box
             iconLabel = QLabel()
             if icon == 'Information':
@@ -1247,13 +1251,14 @@ class CustomMessageBox(QDialog):
             horizontalLayout.addItem(spacer) #add the spacer to layout
             horizontalLayout.addWidget(textLabel) #add the text label to layout
         else: #else no need for an icon 
+            self.setWindowIcon(QIcon('images/serpent.ico')) #add default window icon
             horizontalLayout.addWidget(textLabel) #add only the text label to layout
 
         horizontalLayout.setAlignment(Qt.AlignCenter) #set alignment of horizontal layout
         layout.addLayout(horizontalLayout) #add the horizontal layout to the vertical layout
         OKButton = QPushButton('OK') #create new OK button
         layout.addWidget(OKButton, alignment=Qt.AlignCenter) #add the button to the layout
-        style = """
+        style = '''
             QPushButton {
                 background-color: rgba(32,33,35,255);
                 color: rgb(245,245,245);
@@ -1271,7 +1276,7 @@ class CustomMessageBox(QDialog):
             QPushButton:pressed {
                 background-color: rgb(177, 185, 187);
             }
-        """
+        '''
         OKButton.setStyleSheet(style) #set stylesheet for the OK button
         OKButton.clicked.connect(self.accept) #set an accept operation to the clicks of OK button
         self.setLayout(layout) #finally set the layout of the messsage box

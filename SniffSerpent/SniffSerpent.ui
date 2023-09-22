@@ -62,12 +62,12 @@ QScrollBar::sub-line:vertical {
 }
 
 QListView::item:hover { 
-   background-color: rgb(187, 188, 196);
+   background-color: rgb(173, 174, 184); 
    color:black;
 }
 
 QListView::item:selected { 
-   background-color: rgb(173, 174, 184);
+   background-color: rgb(187, 188, 196);
    color:black;
 }</string>
   </property>
@@ -103,7 +103,7 @@ QListView::item:selected {
      <cursorShape>ArrowCursor</cursorShape>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgba(191, 191, 191, 0.6);
+     <string notr="true">background-color: rgba(204, 204, 204, 0.6);
 color: black;
 border-radius: 15px;
 border-style: outset;
@@ -1207,7 +1207,7 @@ QPushButton:disabled {
      <bool>false</bool>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: rgba(191, 191, 191, 0.6);
+     <string notr="true">background-color: rgba(204, 204, 204, 0.6);;
 color: black;
 border-radius: 15px;
 border-style: outset;
