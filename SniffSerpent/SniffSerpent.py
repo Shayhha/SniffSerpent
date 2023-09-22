@@ -854,7 +854,8 @@ class PacketSniffer(QMainWindow):
         self.PacketList.setModel(self.packetModel) #set the model for the packetlist in gui
         self.packetQueue = Queue() #initialize the packet queue
         
-
+    
+    #method to initialize GUI methods and events
     def initUI(self):
         self.setWindowTitle('SniffSerpent') #set title of window
         self.setWindowIcon(QIcon('images/serpent.ico')) #set icon of window
