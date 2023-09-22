@@ -36,7 +36,7 @@
 
 QScrollBar:vertical {
     background-color: rgba(247, 247, 247,150);
-    border: 0px solid rgb(153, 153, 153);
+    border: 1px solid rgb(153, 153, 153);
     width:10px;    
     margin: 0px 0px 0px 0px;
     border-radius: 4px;
@@ -64,11 +64,13 @@ QScrollBar::sub-line:vertical {
 QListView::item:hover { 
    background-color: rgb(173, 174, 184); 
    color:black;
+   border: 1px solid black;
 }
 
 QListView::item:selected { 
    background-color: rgb(187, 188, 196);
    color:black;
+   border: 1px solid black;
 }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
