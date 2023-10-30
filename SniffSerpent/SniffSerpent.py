@@ -900,7 +900,7 @@ class PacketSniffer(QMainWindow):
 
     #method for setting the settings for ip and port line edit lables
     def setLineEditValidate(self):
-        IPRegex = QRegExp("^((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)$") #regex for IP template (192.168.1.1)
+        IPRegex = QRegExp(r"^((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)$") #regex for IP template (192.168.1.1)
         IPValidator = QRegExpValidator(IPRegex) #create the validator for ip using the regex
         portValidator = QIntValidator(0, 65535) #create a validator for port (number between 0 to 65535)
         self.IPLineEdit.setValidator(IPValidator) #set validator for IP
