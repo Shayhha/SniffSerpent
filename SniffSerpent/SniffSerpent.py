@@ -977,7 +977,9 @@ class PacketSniffer(QMainWindow):
     def StopScanClicked(self):
         if self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #checks if there is a running thread
             self.packetCaptureThread.stop() #calls stop method of the thread 
+            self.packetCaptureThread.exit() #calls exit method of the thread 
             self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan 
+            self.handleGUIState(True) #we set the GUI elements to be clickable again
             self.StartScanButton.setEnabled(True) #set scan button back to being clickable
             CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False)
     
