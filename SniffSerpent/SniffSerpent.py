@@ -860,7 +860,7 @@ class PacketSniffer(QMainWindow):
         self.setWindowTitle('SniffSerpent') #set title of window
         self.setWindowIcon(QIcon('images/serpent.ico')) #set icon of window
         infoImageLabel = ImageLabel(1520, 10, 40, 40, 'images/infoTitle.png', True, self) #create a image label for info icon
-        infoImageLabel.setToolTip('<font size="4">General information about SniffSerpent.</font>') #set toolTip for info icon
+        infoImageLabel.setToolTip('<html><head/><body><p><span style="font-size:10pt;">General information about SniffSerpent.</span></p></body></html>') #set toolTip for info icon
         self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
         self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
         self.LoadScanButton.clicked.connect(self.LoadScanClicked) #add method to handle load scan button
@@ -872,7 +872,7 @@ class PacketSniffer(QMainWindow):
         self.IPLineEdit.textChanged.connect(self.checkIPValidity) #connect signal for textChanged for IP to determine its validity
         self.initComboBox() #set the combobox interface names 
         self.center() #make the app open in center of screen
-        self.show() #show the application
+        self.show() #show the application/
 		
 
     #method for making the app open in the center of screen
