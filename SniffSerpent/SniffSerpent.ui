@@ -195,8 +195,10 @@ QToolTip {
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;
-border: none;</string>
+      <string notr="true">QLabel {
+   background-color: none;
+   border: none;
+}</string>
      </property>
      <property name="text">
       <string>Choose Options To Filter For Scan</string>
@@ -230,7 +232,9 @@ border: none;</string>
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QCheckBox {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>UDP</string>
@@ -267,7 +271,9 @@ border: none;</string>
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QCheckBox {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>ICMP</string>
@@ -304,7 +310,9 @@ border: none;</string>
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QCheckBox {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>ARP</string>
@@ -341,7 +349,9 @@ border: none;</string>
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QCheckBox {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>STP</string>
@@ -378,7 +388,9 @@ border: none;</string>
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QCheckBox {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>DNS</string>
@@ -418,7 +430,9 @@ border: none;</string>
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QCheckBox {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>TCP</string>
@@ -800,8 +814,10 @@ QPushButton:disabled {
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;
-border: none;</string>
+      <string notr="true">QLabel {
+   background-color: none;
+   border: none;
+}</string>
      </property>
      <property name="text">
       <string>Port</string>
@@ -894,8 +910,10 @@ border: none;</string>
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;
-border: none;</string>
+      <string notr="true">QLabel {
+   background-color: none;
+   border: none;
+}</string>
      </property>
      <property name="text">
       <string>IP</string>
@@ -932,7 +950,9 @@ border: none;</string>
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QCheckBox {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>HTTP</string>
@@ -969,7 +989,9 @@ border: none;</string>
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QCheckBox {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>TLS</string>
@@ -1049,8 +1071,10 @@ border: none;</string>
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;
-border: none;</string>
+      <string notr="true">QLabel {
+   background-color: none;
+   border: none;
+}</string>
      </property>
      <property name="text">
       <string>Interface</string>
@@ -1084,7 +1108,9 @@ border: none;</string>
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QCheckBox {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>IGMP</string>
@@ -1121,7 +1147,9 @@ border: none;</string>
       <enum>Qt::ClickFocus</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QCheckBox {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>DHCP</string>
@@ -1393,7 +1421,9 @@ QComboBox QListView{
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QLabel {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>Scan Results</string>
@@ -1427,7 +1457,9 @@ QComboBox QListView{
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color:none;</string>
+      <string notr="true">QLabel {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string>Extended Information</string>
@@ -1460,7 +1492,9 @@ QComboBox QListView{
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: none</string>
+      <string notr="true">QLabel {
+   background-color: none;
+}</string>
      </property>
      <property name="text">
       <string/>
