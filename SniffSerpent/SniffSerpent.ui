@@ -455,6 +455,9 @@ border: none;</string>
      <property name="focusPolicy">
       <enum>Qt::ClickFocus</enum>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Start packet scan and analysis.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
     background-color: rgba(32,33,35,255);
@@ -521,6 +524,9 @@ QPushButton:disabled {
      </property>
      <property name="focusPolicy">
       <enum>Qt::ClickFocus</enum>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Stop packet scan and analysis.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
@@ -589,6 +595,9 @@ QPushButton:disabled {
      <property name="focusPolicy">
       <enum>Qt::ClickFocus</enum>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Save scan in text file or PCAP file.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
     background-color: rgba(32,33,35,255);
@@ -656,6 +665,9 @@ QPushButton:disabled {
      <property name="focusPolicy">
       <enum>Qt::ClickFocus</enum>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Clear screen contents.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
     background-color: rgba(32,33,35,255);
@@ -722,14 +734,19 @@ QPushButton:disabled {
      <property name="focusPolicy">
       <enum>Qt::ClickFocus</enum>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400;&quot;&gt;IP in format {xxx.xxx.xxx.xxx}.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgba(32,33,35,255);
-border-radius: 15px;
-border-style: outset;
-border-width: 2px;
-border-radius: 15px;
-border-color: black;	
-padding: 4px;</string>
+      <string notr="true">QLineEdit {
+   background-color: rgba(32,33,35,255);
+   border-radius: 15px;
+   border-style: outset;
+   border-width: 2px;
+   border-radius: 15px;
+   border-color: black;	
+   padding: 4px;
+}</string>
      </property>
      <property name="inputMask">
       <string/>
@@ -737,8 +754,14 @@ padding: 4px;</string>
      <property name="text">
       <string/>
      </property>
+     <property name="maxLength">
+      <number>27</number>
+     </property>
      <property name="echoMode">
       <enum>QLineEdit::Normal</enum>
+     </property>
+     <property name="placeholderText">
+      <string>         Optional</string>
      </property>
     </widget>
     <widget class="QLabel" name="PortLabel">
@@ -814,14 +837,25 @@ border: none;</string>
      <property name="focusPolicy">
       <enum>Qt::ClickFocus</enum>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400;&quot;&gt;Port from 0 to 65535.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgba(32,33,35,255);
-border-radius: 15px;
-border-style: outset;
-border-width: 2px;
-border-radius: 15px;
-border-color: black;	
-padding: 4px;</string>
+      <string notr="true">QLineEdit {
+   background-color: rgba(32,33,35,255);
+   border-radius: 15px;
+   border-style: outset;
+   border-width: 2px;
+   border-radius: 15px;
+   border-color: black;	  
+   padding: 4px;
+}</string>
+     </property>
+     <property name="maxLength">
+      <number>5</number>
+     </property>
+     <property name="placeholderText">
+      <string>  Optional</string>
      </property>
     </widget>
     <widget class="QLabel" name="IPLabel">
@@ -964,11 +998,13 @@ border: none;</string>
       </size>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgba(32,33,35,255);
-border-radius: 15px;
-border-width: 2px;
-border-radius: 15px;
-padding: 4px;</string>
+      <string notr="true">QFrame {
+   background-color: rgba(32,33,35,255);
+   border-radius: 15px;
+   border-width: 2px;
+   border-radius: 15px;
+   padding: 4px;
+}</string>
      </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
@@ -976,75 +1012,6 @@ padding: 4px;</string>
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <widget class="QComboBox" name="InterfaceComboBox">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>110</width>
-        <height>30</height>
-       </rect>
-      </property>
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>110</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>110</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="font">
-       <font>
-        <family>Arial</family>
-        <pointsize>12</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="cursor">
-       <cursorShape>PointingHandCursor</cursorShape>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">QComboBox {
-    background-color: transparent;
-    border-radius: 15px;
-    border-style: outset;
-    border-width: 2px;
-    border-radius: 15px;
-    border-color: black;	
-    padding: 4px;
-}
-
-QComboBox:hover {
-    border: 2px solid black
-}
-
-QComboBox QAbstractItemView {
-    background-color:  rgb(245,245,245);
-    selection-background-color: rgb(95, 97, 109);
-    color: rgb(0, 0, 0);    
-    padding: 10px;
-    border: 2px solid black;
-    border-radius: 10px;
-    padding-left: 5px;
-    padding-right: 5px;
-}
-
-QComboBox QListView{
-    outline: 0px;
-}</string>
-      </property>
-     </widget>
     </widget>
     <widget class="QLabel" name="InterfaceLabel">
      <property name="geometry">
@@ -1188,6 +1155,9 @@ border: none;</string>
      <property name="focusPolicy">
       <enum>Qt::ClickFocus</enum>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Load PCAP file for packet analysis.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
     background-color: rgba(32,33,35,255);
@@ -1220,6 +1190,78 @@ QPushButton:disabled {
      </property>
      <property name="text">
       <string>Load Scan</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="InterfaceComboBox">
+     <property name="geometry">
+      <rect>
+       <x>330</x>
+       <y>60</y>
+       <width>110</width>
+       <height>30</height>
+      </rect>
+     </property>
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>110</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>110</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <family>Arial</family>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400;&quot;&gt;Current network interface.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QComboBox {
+    background-color: transparent;
+    border-radius: 15px;
+    border-style: outset;
+    border-width: 2px;
+    border-radius: 15px;
+    border-color: black;	
+    padding: 4px;
+}
+
+QComboBox:hover {
+    border: 2px solid black
+}
+
+QComboBox QAbstractItemView {
+    background-color:  rgb(245,245,245);
+    selection-background-color: rgb(95, 97, 109);
+    color: rgb(0, 0, 0);    
+    padding: 10px;
+    border: 2px solid black;
+    border-radius: 10px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+QComboBox QListView{
+    outline: 0px;
+}</string>
      </property>
     </widget>
    </widget>
