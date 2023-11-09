@@ -1193,7 +1193,7 @@ class ImageLabel(QLabel):
         super().__init__(parent) #call default QLabel ctor
         self.isClickable = isClickable #set the isClickable flag
         self.setPixmap(QPixmap(pixmapPath)) #set the path for image 
-        self.setStyleSheet('background-color: none;') #set the backgorund to be transparent
+        self.setStyleSheet('QLabel { background: transparent; }') #set the backgorund to be transparent
         self.setGeometry(x, y, width, height) #set the position for label in GUI
         self.setMouseTracking(True) #set mouse tracking to be enabled
 

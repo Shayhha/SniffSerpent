@@ -71,6 +71,12 @@ QListView::item:selected {
    background-color: rgb(187, 188, 196);
    color:black;
    border: 1px solid black;
+}
+
+QToolTip { 
+   color: rgb(245,245,245);
+   background-color: rgba(46, 47, 56, 0.8);
+   border: 1px solid rgb(102,102,102);
 }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -1348,7 +1354,7 @@ QComboBox QListView{
     </property>
     <property name="styleSheet">
      <string notr="true">QFrame {
-background-color:  rgba(32,33,35,255);
+   background-color:  rgba(32,33,35,255);
 }</string>
     </property>
     <property name="frameShape">
