@@ -863,7 +863,7 @@ border: none;</string>
     <widget class="QLabel" name="IPLabel">
      <property name="geometry">
       <rect>
-       <x>460</x>
+       <x>459</x>
        <y>60</y>
        <width>20</width>
        <height>30</height>
@@ -1018,22 +1018,22 @@ border: none;</string>
     <widget class="QLabel" name="InterfaceLabel">
      <property name="geometry">
       <rect>
-       <x>240</x>
+       <x>241</x>
        <y>60</y>
-       <width>90</width>
+       <width>87</width>
        <height>30</height>
       </rect>
      </property>
      <property name="minimumSize">
       <size>
-       <width>90</width>
+       <width>87</width>
        <height>30</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>0</width>
-       <height>0</height>
+       <width>87</width>
+       <height>30</height>
       </size>
      </property>
      <property name="font">
