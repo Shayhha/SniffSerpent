@@ -872,7 +872,7 @@ class PacketSniffer(QMainWindow):
         self.IPLineEdit.textChanged.connect(self.checkIPValidity) #connect signal for textChanged for IP to determine its validity
         self.initComboBox() #set the combobox interface names 
         self.center() #make the app open in center of screen
-        self.show() #show the application/
+        self.show() #show the application
 		
 
     #method for making the app open in the center of screen
