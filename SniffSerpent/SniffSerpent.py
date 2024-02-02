@@ -61,8 +61,10 @@ class Default_Packet(ABC): #abstarct class for default packet
     def fitStr(self, st, info): 
         output = ''
         if info is not None: #if info not none we continue
-            if isinstance(info, bytes): #if given info is byte we convert it to utf-8 string
-                info = info.decode('utf-8', errors='replace') #decode the byte to string
+            if isinstance(info, list): #if given info is list we convert it to utf-8 string
+                info = ', '.join(item.decode('utf-8', 'replace') if isinstance(item, bytes) else str(item) for item in info) #decode the list into string
+            elif isinstance(info, bytes): #if given info is byte we convert it to utf-8 string
+                info = info.decode('utf-8', 'replace') #decode the byte to string
             if len(info) >= 46: #if the string is longer then specified length we add a new line
                 temp = '\n'.join(info[i:i+46] for i in range(0, len(info), 46)) #iterating over the string and adding new line after specified amount of characters
                 output += f'{st}\n{temp}\n\n' #insert to the output 
@@ -83,7 +85,7 @@ class Default_Packet(ABC): #abstarct class for default packet
         usernames = ['username', 'Username', 'UserName', 'user', 'User', 'uname', 'Uname', 'usr', 'Usr', 'email', 'Email', 'login', 'Login', 'usrname', 'Usrname', 'uid', 'Uid']
         passwords = ['password', 'Password', 'pass', 'Pass', 'pwd', 'Pwd', 'passwd', 'Passwd', 'pswd', 'psw', 'secret', 'Secret', 'secure', 'Secure', 'key', 'Key', 'auth', 'Auth']
         if self.packet.haslayer(Raw) and self.packet.haslayer(HTTPRequest): #if true we have http request packet and it has a payload
-            payload = self.packet[Raw].load.decode('utf-8', errors='replace') #we decode the payload of the packet 
+            payload = self.packet[Raw].load.decode('utf-8', 'replace') #we decode the payload of the packet 
             for username in usernames: #we iterate over the usernames to check if there's a matching username label
                 if username in payload or username.upper() in payload: #if true we found a matching label
                     userRegex = httpRegex(username) #create a regex with the username label and regex template
