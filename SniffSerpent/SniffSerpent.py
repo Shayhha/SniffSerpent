@@ -297,6 +297,15 @@ class HTTP_Packet(Default_Packet):
 
 #---------------------------------------------------DNS------------------------------------------------#
 class DNS_Packet(Default_Packet):
+    DNSRecordTypes = {
+        1: 'A', 28: 'AAAA', 18: 'AFSDB', 42: 'APL', 257: 'CAA', 60: 'CDNSKEY', 59: 'CDS', 37: 'CERT', 5: 'CNAME', 62: 'CSYNC',
+        49: 'DHCID', 32769: 'DLV', 39: 'DNAME', 48: 'DNSKEY', 43: 'DS', 108: 'EUI48', 109: 'EUI64', 13: 'HINFO', 55: 'HIP',
+        65: 'HTTPS', 45: 'IPSECKEY', 25: 'KEY', 36: 'KX', 29: 'LOC', 15: 'MX', 35: 'NAPTR', 2: 'NS', 47: 'NSEC', 50: 'NSEC3',
+        51: 'NSEC3PARAM', 61: 'OPENPGPKEY', 12: 'PTR', 17: 'RP', 46: 'RRSIG', 24: 'SIG', 53: 'SMIMEA', 6: 'SOA', 33: 'SRV',
+        44: 'SSHFP', 64: 'SVCB', 32768: 'TA', 249: 'TKEY', 52: 'TLSA', 250: 'TSIG', 16: 'TXT', 256: 'URI', 63: 'ZONEMD', 255: 'ANY'}
+    
+    DNSClassTypes = {1: 'IN', 2: 'CS', 3: 'CH', 4: 'HS', 255: 'ANY', 254: 'NONE', 32769: 'DLV'}
+
     def __init__(self, packet=None, id=None):
         super().__init__('DNS', packet, id) #call parent ctor
         if packet.haslayer(DNS): #checks if packet is DNS
@@ -332,6 +341,14 @@ class DNS_Packet(Default_Packet):
             f'{self.name} Packet: ({srcMac}) --> ({dstMac})' #add the info to output
 
         output += f' Type: {"Response" if dnsPacket.qr else "Request"}' #add the dns type, response or request
+        
+        if dnsPacket.an: #check if its response packet
+            dnsResponseType = self.DNSRecordTypes[dnsPacket.an.type] if dnsPacket.an.type in self.DNSRecordTypes else dnsPacket.an.type #represents dns record type based on the DNSRecordTypes dictionary
+            output += f' {dnsResponseType}' #add response record type
+        elif dnsPacket.qd: #else we check if its request packet
+            dnsRequestType = self.DNSRecordTypes[dnsPacket.qd.qtype] if dnsPacket.qd.qtype in self.DNSRecordTypes else dnsPacket.qd.qtype #represents dns record type based on the DNSRecordTypes dictionary
+            output += f' {dnsRequestType}' #add request record type
+            
         output += f' | Size: {packetSize} bytes' #add the size of the packet
         return output
 
@@ -344,19 +361,23 @@ class DNS_Packet(Default_Packet):
             output += f'ID: {dnsPacket.id}\n\n' #id of the dns packet
             if dnsPacket.qr == 1: #means its a response packet
                 if dnsPacket.an: #if dns packet is response packet
+                    dnsResponseType = self.DNSRecordTypes[dnsPacket.an.type] if dnsPacket.an.type in self.DNSRecordTypes else dnsPacket.an.type #represents dns record type based on the DNSRecordTypes dictionary
+                    dnsResponseClass = self.DNSClassTypes[dnsPacket.an.rclass] if dnsPacket.an.rclass in self.DNSClassTypes else dnsPacket.an.rclass #represents dns class type based on the DNSClassTypes dictionary
                     output += f'Type: Response\n\n' #add type of packet to output
                     output += self.fitStr('Response Name:', dnsPacket.an.rrname) #add repsonse name to output
-                    output += f'Response Type: {dnsPacket.an.type}, ' #add response type to output
-                    output += f'Response Class: {dnsPacket.an.rclass}\n\n' #add response class to output
+                    output += f'Response Type: {dnsResponseType}, ' #add response type to output
+                    output += f'Response Class: {dnsResponseClass}\n\n' #add response class to output
                     output += f'Num Responses: {len(dnsPacket.an)}\n\n' #add number of responses to output
                     if hasattr(dnsPacket.an, 'rdata'): #check if rdata attribute exists
                         output += self.fitStr('Response Data:', dnsPacket.an.rdata) #specify the rdata parameter
             else: #means its a request packet
                 if dnsPacket.qd:
+                    dnsRequestType = self.DNSRecordTypes[dnsPacket.qd.qtype] if dnsPacket.qd.qtype in self.DNSRecordTypes else dnsPacket.qd.qtype #represents dns record type based on the DNSRecordTypes dictionary
+                    dnsRequestClass = self.DNSClassTypes[dnsPacket.qd.qclass] if dnsPacket.qd.qclass in self.DNSClassTypes else dnsPacket.qd.qclass #represents dns class type based on the DNSClassTypes dictionary
                     output += f'Type: Request\n\n' #add type of packet to output
                     output += self.fitStr('Request Name:', dnsPacket.qd.qname) #add request name to output
-                    output += f'Request Type: {dnsPacket.qd.qtype}, ' #add request type to output
-                    output += f'Request Class: {dnsPacket.qd.qclass}\n\n' #add request class to output
+                    output += f'Request Type: {dnsRequestType}, ' #add request type to output
+                    output += f'Request Class: {dnsRequestClass}\n\n' #add request class to output
                     output += f'Num Requests: {len(dnsPacket.qd)}\n\n' #add num of requests to output
         return output
     
@@ -418,7 +439,7 @@ class ICMP_Packet(Default_Packet):
     def info(self):
         output = ''
         packetSize = len(self.packet) #represent the packet size
-        icmpType = self.icmpTypes[self.packet[ICMP].type] if self.packet[ICMP].type in self.icmpTypes else None #represents icmp type based onn the icmpTypes dictionary
+        icmpType = self.icmpTypes[self.packet[ICMP].type] if self.packet[ICMP].type in self.icmpTypes else self.packet[ICMP].type #represents icmp type based on the icmpTypes dictionary
         icmpCode = self.packet[ICMP].code #represents icmp code
         if IP in self.packet: #if packet has ip layer
             srcIp = self.packet[IP].src #represents the source ip
@@ -433,7 +454,7 @@ class ICMP_Packet(Default_Packet):
     def moreInfo(self): 
         output = ''
         if ICMP in self.packet: #if packet has icmp layer
-            icmpType = self.icmpTypes[self.packet[ICMP].type] if self.packet[ICMP].type in self.icmpTypes else None #represents icmp type based onn the icmpTypes dictionary
+            icmpType = self.icmpTypes[self.packet[ICMP].type] if self.packet[ICMP].type in self.icmpTypes else self.packet[ICMP].type #represents icmp type based on the icmpTypes dictionary
             icmpCode = self.packet[ICMP].code #represents icmp code
             icmpSeq = self.packet[ICMP].seq #represents icmp sequence number
             icmpId = self.packet[ICMP].id #represents icmp identifier
