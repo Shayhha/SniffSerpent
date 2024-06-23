@@ -65,6 +65,7 @@ class Default_Packet(ABC): #abstarct class for default packet
                 info = ', '.join(item.decode('utf-8', 'replace') if isinstance(item, bytes) else str(item) for item in info) #decode the list into string
             elif isinstance(info, bytes): #if given info is byte we convert it to utf-8 string
                 info = info.decode('utf-8', 'replace') #decode the byte to string
+            info = info.rstrip('.') #remove trailing dot if present
             if len(info) >= 46: #if the string is longer then specified length we add a new line
                 temp = '\n'.join(info[i:i+46] for i in range(0, len(info), 46)) #iterating over the string and adding new line after specified amount of characters
                 output += f'{st}\n{temp}\n\n' #insert to the output 
@@ -868,6 +869,7 @@ class PacketSniffer(QMainWindow):
     packetModel = None #packet list model for QListView 
     packetQueue = None #queue for packets before adding them to list (thread safe)
     validIp = True #set validIp flag to true
+    isClosing = False #set isClosing flag to false
 
     def __init__(self):
         super(PacketSniffer, self).__init__()
@@ -897,6 +899,14 @@ class PacketSniffer(QMainWindow):
         self.center() #make the app open in center of screen
         self.show() #show the application
 		
+
+    #method for closing the program and managing the packetCapture thread
+    def closeEvent(self, event):
+        if self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #if true we have a scan running
+            self.isClosing = True #set the isClosing flag to true to indicate that user wants to close program
+            self.StopScanClicked() #call StopScanClicked method to stop the scan
+        event.accept() #accept the close event
+
 
     #method for making the app open in the center of screen
     def center(self):
@@ -1003,7 +1013,11 @@ class PacketSniffer(QMainWindow):
             self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan 
             self.handleGUIState(True) #we set the GUI elements to be clickable again
             self.StartScanButton.setEnabled(True) #set scan button back to being clickable
-            CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False)
+            if not self.isClosing: #if false we show messagebox
+                CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False) #show messagebox
+            else: #else user wants to close program
+                self.isClosing = False #set isClosing flag to false
+                self.close() #call close method to close program
     
     
     #method for saving scan data into a text file
