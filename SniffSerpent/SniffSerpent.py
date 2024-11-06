@@ -65,10 +65,11 @@ class Default_Packet(ABC): #abstarct class for default packet
                 info = ', '.join(item.decode('utf-8', 'replace') if isinstance(item, bytes) else str(item) for item in info) #decode the list into string
             elif isinstance(info, bytes): #if given info is byte we convert it to utf-8 string
                 info = info.decode('utf-8', 'replace') #decode the byte to string
-            if len(info) >= 46: #if the string is longer then specified length we add a new line
-                temp = '\n'.join(info[i:i+46] for i in range(0, len(info), 46)) #iterating over the string and adding new line after specified amount of characters
+            info = info.rstrip('.') #remove trailing dot if present
+            if len(info) >= 52: #if the string is longer then specified length we add a new line
+                temp = '\n'.join(info[i:i+52] for i in range(0, len(info), 52)) #iterating over the string and adding new line after specified amount of characters
                 output += f'{st}\n{temp}\n\n' #insert to the output 
-            elif len(f'{st}: {info}') >= 46: #if the info string and st string togther exceed the specified characters we add new line
+            elif len(f'{st}: {info}') >= 52: #if the info string and st string togther exceed the specified characters we add new line
                 output += f'{st}\n{info}\n\n' #insert to the output
             else: #else info and st strings are not exceeding the specifed amount of characters
                 output += f'{st} {info}\n\n' #we add the original info and st strings to the output without a new line
@@ -107,21 +108,22 @@ class Default_Packet(ABC): #abstarct class for default packet
     #method for ip configuration capture
     def ipInfo(self): 
         output = ''
-        if IP in self.packet: #if true means packet has ip layer
+        if self.packet.haslayer(IP): #if packet has ip layer
             srcIp = self.packet[IP].src #represents the source ip
             dstIp = self.packet[IP].dst #represents the destination ip
-            output += f'Source IP: {srcIp}\n\n' #insert source ip to output
-            output += f'Destination IP: {dstIp}\n\n' #insert denstination ip to output
-            #additional Information for IPv4 and IPv6 packets
-            if self.packet[IP].version == 4: #if true we have ipv4 packet
-                ttl = self.packet[IP].ttl #represents ttl parameter in packet
-                dscp = self.packet[IP].tos #represents dscp parameter in packet
-                output += f'TTL: {ttl}, DSCP: {dscp}\n\n' #add both to output
-
-            elif self.packet[IP].version == 6: #else we have an ipv6 packet
-                hopLimit = self.packet[IPv6].hlim #represents the hop limit parameter in packet
-                trafficClass = self.packet[IPv6].tc #represnets the traffic class in packet
-                output += f'Hop Limit: {hopLimit}, Traffic Class: {trafficClass}\n\n' #add them both to output
+            ttl = self.packet[IP].ttl #represents ttl parameter in packet
+            dscp = self.packet[IP].tos #represents dscp parameter in packet
+            output += self.fitStr('Source IP:', srcIp) #insert source ip to output
+            output += self.fitStr('Destination IP:', dstIp) #insert denstination ip to output
+            output += f'TTL: {ttl}, DSCP: {dscp}\n\n' #add both to output
+        elif self.packet.haslayer(IPv6): #if packet has ipv6 layer
+            srcIp = self.packet[IPv6].src #represents the source ip
+            dstIp = self.packet[IPv6].dst #represents the destination ip
+            hopLimit = self.packet[IPv6].hlim #represents the hop limit parameter in packet
+            trafficClass = self.packet[IPv6].tc #represnets the traffic class in packet
+            output += self.fitStr('Source IP:', srcIp) #insert source ip to output
+            output += self.fitStr('Destination IP:', dstIp) #insert denstination ip to output
+            output += f'Hop Limit: {hopLimit}, Traffic Class: {trafficClass}\n\n' #add them both to output
         if hasattr(self.packet, 'chksum') and not self.packet.haslayer(IGMP): #if packet has checksum parameter (IGMP has its own)
             output += f'Checksum: {self.packet.chksum}\n\n' #we add the checksum to output
         output += f'Packet Size: {len(self.packet)} bytes\n\n' #add the packet size to output
@@ -130,22 +132,26 @@ class Default_Packet(ABC): #abstarct class for default packet
 
     #method representing the packet briefly, derived classes may need to implement for different types
     def info(self): 
-        output ='' #output string for information of packet
+        output = '' #output string for information of packet
         srcMac = self.packet.src #represents the source mac address
         dstMac = self.packet.dst #represents the destination mac address
         srcPort = '' #source port of packet
-        dstPort ='' #destination port of packet
+        dstPort = '' #destination port of packet
         packetSize = len(self.packet) #size of the packet
 
-        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP): #id packet is tcp or udp we get port info
+        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP): #if packet is tcp or udp we get port info
             srcPort = self.packet.sport #represents the source port of packet
             dstPort = self.packet.dport #represents the destination port of packet
-        if self.packet.haslayer(IP): #if true packet have ip address so we print the packet info with ip and port
-            srcIp = self.packet[IP].src #represents the source ip of packet
-            dstIp = self.packet[IP].dst #represents the destination ip of packet
-            output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #insert info to output
-        elif not self.packet.haslayer(IP): #else no ip layer 
-            output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #insert info without ip to output
+            if self.packet.haslayer(IP): #if packet have ip address so we print the packet info with ip and port
+                srcIp = self.packet[IP].src #represents the source ip of packet
+                dstIp = self.packet[IP].dst #represents the destination ip of packet
+                output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #insert info to output
+            elif self.packet.haslayer(IPv6): #if packet have ipv6 address so we print the packet info with ip and port
+                srcIp = self.packet[IPv6].src #represents the source ip of packet
+                dstIp = self.packet[IPv6].dst #represents the destination ip of packet
+                output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #insert info to output
+            else: #else no ip layer 
+                output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #insert info without ip to output
         if self.packet.haslayer(HTTP) and (self.packet.haslayer(HTTPResponse) or self.packet.haslayer(HTTPRequest)): #if true packet is http
             if self.packet.haslayer(HTTPRequest) and self.loginInfo(): #if true it means we have a login request http packet (with username and password)
                 output += ' Type: Login Request' #add http login request type to ouput
@@ -183,8 +189,6 @@ class TCP_Packet(Default_Packet):
     def __init__(self, packet=None, id=None): #ctor for tcp packet
         super().__init__('TCP', packet, id) #call parent ctor
         if packet.haslayer(TCP): #checks if packet is TCP
-            if IP not in packet: #if true the packet is raw
-                self.name = 'Raw TCP' #specify its a raw packet
             self.packetType = TCP #specify the packet type
 
 
@@ -229,8 +233,6 @@ class UDP_Packet(Default_Packet):
     def __init__(self, packet=None, id=None): #ctor 
         super().__init__('UDP', packet, id) #call parent ctor
         if packet.haslayer(UDP): #checks if packet is UDP
-            if IP not in packet: #if true the packet has no ip, means its raw
-                self.name = 'Raw UDP' #update the packet name
             self.packetType = UDP #add packet type
 
 
@@ -247,7 +249,7 @@ class HTTP_Packet(Default_Packet):
     #method for packet information
     def moreInfo(self):
         output = super().moreInfo() #call parent moreInfo method
-        if self.packet and HTTP in self.packet: #if packet has HTTP layer
+        if self.packet.haslayer(HTTP): #if packet has HTTP layer
             httpPacket = self.packet[HTTP] #set the http packet
             headers = {} #set headers to be an empty dictionary
             if self.packet.haslayer(HTTPResponse): #if packet is http response
@@ -314,31 +316,29 @@ class DNS_Packet(Default_Packet):
 
     #method for brief packet information
     def info(self):
-        output ='' #output string for information of packet
+        output = '' #output string for information of packet
         dnsPacket = self.packet[DNS] #parameter for dns packet
         srcMac = self.packet.src #representst the source mac address
         dstMac = self.packet.dst #represents the destination mac address
         srcIp = '' #represents the source ip address
         dstIp = '' #represents the destination ip address
         srcPort = '' #represents the source port
-        dstPort ='' #represents the destination port
+        dstPort = '' #represents the destination port
         packetSize = len(self.packet) #represenets the packet size
 
-        if self.packet.haslayer(IP): #if true packet has ip layer
-            srcIp = self.packet[IP].src #set the source ip
-            dstIp = self.packet[IP].dst #set the destination ip
-        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP): #if dns packet transmitted through tcp or udp it has port 
+        if self.packet.haslayer(TCP) or self.packet.haslayer(UDP): #if dns packet transmitted through tcp or udp 
             srcPort = self.packet.sport #set the source port
             dstPort = self.packet.dport #set the destination port
-
-        if (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and self.packet.haslayer(IP): #if it's transmitted through tcp or udp with ip
-            output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #add the info with ip to output
-        elif (self.packet.haslayer(TCP) or self.packet.haslayer(UDP)) and not self.packet.haslayer(IP): #if its transmitted through tcp or udp without ip
-            output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #add the info without ip to output
-        elif self.packet.haslayer(IP): # if there's only ip layer
-            f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac})' #add the info to output
-        elif not self.packet.haslayer(IP): #else it wasn't transmitted through tcp or udp and it doesn't have ip
-            f'{self.name} Packet: ({srcMac}) --> ({dstMac})' #add the info to output
+            if self.packet.haslayer(IP): #if packet has ip layer
+                srcIp = self.packet[IP].src #set the source ip
+                dstIp = self.packet[IP].dst #set the destination ip
+                output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #add the info with ip to output
+            elif self.packet.haslayer(IPv6): #else packet has ipv6 layer
+                srcIp = self.packet[IPv6].src #set the source ip
+                dstIp = self.packet[IPv6].dst #set the destination ip
+                output += f'{self.name} Packet: ({srcIp}):({srcPort}) --> ({dstIp}):({dstPort})' #add the info with ip to output
+            else: #else no ip layer 
+                output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #insert info without ip to output
 
         output += f' Type: {"Response" if dnsPacket.qr else "Request"}' #add the dns type, response or request
         
@@ -356,7 +356,7 @@ class DNS_Packet(Default_Packet):
     #method for packet information
     def moreInfo(self):
         output = super().moreInfo() #call parent moreInfo method
-        if self.packet and DNS in self.packet: #if packet has DNS layer
+        if self.packet.haslayer(DNS): #if packet has DNS layer
             dnsPacket = self.packet[DNS] #save the dns packet in parameter
             output += f'ID: {dnsPacket.id}\n\n' #id of the dns packet
             if dnsPacket.qr == 1: #means its a response packet
@@ -388,15 +388,13 @@ class TLS_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
         super().__init__('TLS', packet, id) #call parent ctor
         if packet.haslayer(TLS): #checks if packet is TLS
-            if IP not in packet: #if true the packet has no ip, means its raw
-                self.name = 'Raw TLS' #update the packet name
             self.packetType = TLS #add packet type
     
     
     #method for packet information
     def moreInfo(self):
         output = super().moreInfo() #call parent moreInfo method
-        if self.packet and TLS in self.packet: #if packet has TLS layer
+        if self.packet.haslayer(TLS): #if packet has TLS layer
             tlsPacket = self.packet[TLS] #save the TLS packet in parameter
             output += f'Version: {tlsPacket.version}\n\n' #version of the TLS packet
             if self.packet.haslayer(TLSClientHello): #if true the packet is a client hello response
@@ -430,8 +428,6 @@ class ICMP_Packet(Default_Packet):
     def __init__(self, packet=None, id=None):
         super().__init__('ICMP', packet, id) #call parent ctor
         if packet.haslayer(ICMP): #checks if packet is icmp
-            if IP not in packet: #if true the packet has no ip, means its raw
-                self.name = 'Raw ICMP' #update the packet name
             self.packetType = ICMP #add packet type
 
     
@@ -441,9 +437,13 @@ class ICMP_Packet(Default_Packet):
         packetSize = len(self.packet) #represent the packet size
         icmpType = self.icmpTypes[self.packet[ICMP].type] if self.packet[ICMP].type in self.icmpTypes else self.packet[ICMP].type #represents icmp type based on the icmpTypes dictionary
         icmpCode = self.packet[ICMP].code #represents icmp code
-        if IP in self.packet: #if packet has ip layer
+        if self.packet.haslayer(IP): #if packet has ip layer
             srcIp = self.packet[IP].src #represents the source ip
             dstIp = self.packet[IP].dst #represents the destination ip
+            output += f'{self.name} Packet: ({srcIp}) --> ({dstIp}) | Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes' #add to output the packet info with ip
+        elif self.packet.haslayer(IPv6): #if packet has ipv6 layer
+            srcIp = self.packet[IPv6].src #represents the source ip
+            dstIp = self.packet[IPv6].dst #represents the destination ip
             output += f'{self.name} Packet: ({srcIp}) --> ({dstIp}) | Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes' #add to output the packet info with ip
         else:
             output += f'{self.name} Packet: Type: {icmpType}, Code: {icmpCode} | Size: {packetSize} bytes' #add to output the packet info 
@@ -453,7 +453,7 @@ class ICMP_Packet(Default_Packet):
     #method for packet information
     def moreInfo(self): 
         output = ''
-        if ICMP in self.packet: #if packet has icmp layer
+        if self.packet.haslayer(ICMP): #if packet has icmp layer
             icmpType = self.icmpTypes[self.packet[ICMP].type] if self.packet[ICMP].type in self.icmpTypes else self.packet[ICMP].type #represents icmp type based on the icmpTypes dictionary
             icmpCode = self.packet[ICMP].code #represents icmp code
             icmpSeq = self.packet[ICMP].seq #represents icmp sequence number
@@ -493,7 +493,7 @@ class DHCP_Packet(Default_Packet):
     #method for packet information
     def moreInfo(self):
         output = super().moreInfo() #call parent moreInfo method
-        if DHCP in self.packet: #if true its a DHCP packet
+        if self.packet.haslayer(DHCP): #if true its a DHCP packet
             dhcpPacket = self.packet[DHCP] #set the DHCP packet in variable
             if dhcpPacket.options[0][1] == 1 or dhcpPacket.options[0][1] == 3: #if true its a dicovery/request DHCP packet
                 hostname = self.getOption('hostname') #get the hostname from options
@@ -558,7 +558,7 @@ class ARP_Packet(Default_Packet):
     #method for packet information
     def moreInfo(self):
         output = ''
-        if ARP in self.packet: #if packet has layer of arp
+        if self.packet.haslayer(ARP): #if packet has layer of arp
             output += f'{self.name} Packet:\n\n' #add packet name to output
             output += f'Source MAC: {self.packet[ARP].hwsrc}\n\n' #add arp source mac address
             output += f'Destination MAC: {self.packet[ARP].hwdst}\n\n' #add arp destination mac address
@@ -592,9 +592,13 @@ class IGMP_Packet(Default_Packet):
         dstMac = self.packet.dst #represents the destination mac address
         packetSize = len(self.packet) #size of the packet
         igmpType = self.igmpTypes[self.packet[IGMP].type] #represents the igmp type
-        if self.packet.haslayer(IP): #if true packet have ip address so we add the packet info with ip and type
+        if self.packet.haslayer(IP): #if packet have ip address so we add the packet info with ip and type
             srcIp = self.packet[IP].src #represents the source ip of packet
             dstIp = self.packet[IP].dst #represents the destination ip of packet
+            output += f'{self.name} Packet: ({srcIp}) --> ({dstIp}) Type: {igmpType} | Size: {packetSize} bytes' #insert info to output
+        elif self.packet.haslayer(IPv6):  #if packet have ipv6 address so we add the packet info with ip and type
+            srcIp = self.packet[IPv6].src #set the source ip
+            dstIp = self.packet[IPv6].dst #set the destination ip
             output += f'{self.name} Packet: ({srcIp}) --> ({dstIp}) Type: {igmpType} | Size: {packetSize} bytes' #insert info to output
         else: #if packet doesnt have ip layer we print its mac address annd type
             output += f'{self.name} Packet: ({srcMac}) --> ({dstMac}) Type: {igmpType} | Size: {packetSize} bytes' #insert info to output
@@ -604,7 +608,7 @@ class IGMP_Packet(Default_Packet):
     #method for packet information
     def moreInfo(self):
         output = super().moreInfo() #call parent moreInfo
-        if IGMP in self.packet: #if true it means packet is IGMP
+        if self.packet.haslayer(IGMP): #if true it means packet is IGMP
             output += f'Type: {self.igmpTypes[self.packet[IGMP].type]}\n\n' #add IGMP type to output
             output += f'Group Address: {self.packet[IGMP].gaddr}\n\n' #add IGMP group address to output
             output += f'Maximum Response Code: {self.packet[IGMP].mrcode}\n\n' #add IGMP mrcode to output
@@ -623,16 +627,16 @@ class STP_Packet(Default_Packet):
 
     #method for brief packet information
     def info(self):
-            output = ''
-            packetSize = len(self.packet) #represents the stp packet size
-            output += f'{self.name} Packet: ({self.packet.src}) --> ({self.packet.dst}) | Size: {packetSize} bytes' #add packet info to output
-            return output
+        output = ''
+        packetSize = len(self.packet) #represents the stp packet size
+        output += f'{self.name} Packet: ({self.packet.src}) --> ({self.packet.dst}) | Size: {packetSize} bytes' #add packet info to output
+        return output
 
     
     #method for packet information
     def moreInfo(self):
         output = ''
-        if STP in self.packet: #if packet is an stp packet
+        if self.packet.haslayer(STP): #if packet is an stp packet
             stpProto = self.packet[STP].proto #represents stp protocol
             stpVersion = self.packet[STP].version #represents stp version
             stpBridgeId = self.packet[STP].bridgeid #represents stp bridge id
@@ -868,6 +872,7 @@ class PacketSniffer(QMainWindow):
     packetModel = None #packet list model for QListView 
     packetQueue = None #queue for packets before adding them to list (thread safe)
     validIp = True #set validIp flag to true
+    isClosing = False #set isClosing flag to false
 
     def __init__(self):
         super(PacketSniffer, self).__init__()
@@ -882,7 +887,7 @@ class PacketSniffer(QMainWindow):
     def initUI(self):
         self.setWindowTitle('SniffSerpent') #set title of window
         self.setWindowIcon(QIcon('images/serpent.ico')) #set icon of window
-        infoImageLabel = ImageLabel(1520, 10, 40, 40, 'images/infoTitle.png', True, self) #create a image label for info icon
+        infoImageLabel = ImageLabel(1548, 10, 40, 40, 'images/infoTitle.png', True, self) #create a image label for info icon
         infoImageLabel.setToolTip('<html><head/><body><p><span style="font-size:10pt;">General information about SniffSerpent.</span></p></body></html>') #set toolTip for info icon
         self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
         self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
@@ -897,6 +902,14 @@ class PacketSniffer(QMainWindow):
         self.center() #make the app open in center of screen
         self.show() #show the application
 		
+
+    #method for closing the program and managing the packetCapture thread
+    def closeEvent(self, event):
+        if self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #if true we have a scan running
+            self.isClosing = True #set the isClosing flag to true to indicate that user wants to close program
+            self.StopScanClicked() #call StopScanClicked method to stop the scan
+        event.accept() #accept the close event
+
 
     #method for making the app open in the center of screen
     def center(self):
@@ -1003,7 +1016,11 @@ class PacketSniffer(QMainWindow):
             self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan 
             self.handleGUIState(True) #we set the GUI elements to be clickable again
             self.StartScanButton.setEnabled(True) #set scan button back to being clickable
-            CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False)
+            if not self.isClosing: #if false we show messagebox
+                CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False) #show messagebox
+            else: #else user wants to close program
+                self.isClosing = False #set isClosing flag to false
+                self.close() #call close method to close program
     
     
     #method for saving scan data into a text file
@@ -1322,4 +1339,3 @@ if __name__ == '__main__':
     #GetAvailableInterfaces()
 
 #-----------------------------------------------------------MAIN-END---------------------------------------------------------#
-
