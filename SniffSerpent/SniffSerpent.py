@@ -1,23 +1,19 @@
-import sys
-import os
-import re
-import logging
+import sys, os, re, logging
 logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
 from abc import ABC, abstractmethod
-import scapy.all as scapy
-from scapy.all import sniff, wrpcap, rdpcap, get_if_list, IP, IPv6, TCP, UDP, ICMP, ARP, Raw 
+from urllib.parse import unquote
+from scapy.all import AsyncSniffer, wrpcap, rdpcap, get_if_list, IP, IPv6, TCP, UDP, ICMP, ARP, Raw 
 from scapy.layers.dns import DNS
 from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 from scapy.layers.dhcp import DHCP, BOOTP
 from scapy.layers.tls.all import TLS, TLSClientHello, TLSServerHello, TLSClientKeyExchange, TLSServerKeyExchange, TLSNewSessionTicket
 from scapy.contrib.igmp import IGMP
 from scapy.layers.l2 import STP
-from PyQt5.uic import loadUi
-from PyQt5.QtCore import pyqtSignal, Qt, QThread, QTimer, QSize, QRegExp
-from PyQt5.QtGui import QIcon, QPixmap, QStandardItem, QStandardItemModel, QRegExpValidator, QIntValidator
-from PyQt5.QtWidgets import QApplication, QDesktopWidget, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy, QDialog, QLabel, QPushButton, QStyle, QHBoxLayout, QFileDialog
-from urllib.parse import unquote
-from queue import Queue
+from interface.ui_SniffSerpent import Ui_SniffSerpent
+from PySide6.QtCore import Signal, Slot, Qt, QTimer, QStandardPaths, QRegularExpression, QThread
+from PySide6.QtGui import QGuiApplication, QIcon, QCursor, QStandardItem, QStandardItemModel, QRegularExpressionValidator
+from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QDialog, QFileDialog, QLabel, QPushButton, QStyle, QVBoxLayout, QHBoxLayout, QHBoxLayout
+from PySide6.QtNetwork import QLocalServer, QLocalSocket
 
 
 #------------------------------------------------------Default_Packet-------------------------------------------------------#
@@ -33,20 +29,20 @@ class Default_Packet(ABC): #abstarct class for default packet
         self.id = id
         
 
-    #get method for id
-    def getId(self): 
-        return self.id #return the id 
-    
-
-    #set method for packet type
-    def setPacketType(self, packetType): 
-        self.packetType = packetType
-
-
     #get method for packet object
     def getPacket(self):
         return self.packet #return the packet object
-    
+
+
+    #get method for id
+    def getId(self): 
+        return self.id #return the id
+
+
+    #set method for id
+    def setId(self, id):
+        self.id = id #set the id
+
 
     #method for raw info capture
     def rawInfo(self):
@@ -60,7 +56,7 @@ class Default_Packet(ABC): #abstarct class for default packet
     #method that handles a long string and makes it fit in the GUI 
     def fitStr(self, st, info): 
         output = ''
-        if info is not None: #if info not none we continue
+        if info != None: #if info not none we continue
             if isinstance(info, list): #if given info is list we convert it to utf-8 string
                 info = ', '.join(item.decode('utf-8', 'replace') if isinstance(item, bytes) else str(item) for item in info) #decode the list into string
             elif isinstance(info, bytes): #if given info is byte we convert it to utf-8 string
@@ -340,13 +336,13 @@ class DNS_Packet(Default_Packet):
             else: #else no ip layer 
                 output += f'{self.name} Packet: ({srcMac}):({srcPort}) --> ({dstMac}):({dstPort})' #insert info without ip to output
 
-        output += f' Type: {"Response" if dnsPacket.qr else "Request"}' #add the dns type, response or request
+        output += f' Type: {"Response" if dnsPacket.qr == 1 else "Request"}' #add the dns type, response or request
         
-        if dnsPacket.an: #check if its response packet
-            dnsResponseType = self.DNSRecordTypes[dnsPacket.an.type] if dnsPacket.an.type in self.DNSRecordTypes else dnsPacket.an.type #represents dns record type based on the DNSRecordTypes dictionary
+        if dnsPacket.an and dnsPacket.ancount > 0: #check if its response packet
+            dnsResponseType = self.DNSRecordTypes[dnsPacket.an[0].type] if dnsPacket.an[0].type in self.DNSRecordTypes else dnsPacket.an[0].type #represents dns record type based on the DNSRecordTypes dictionary
             output += f' {dnsResponseType}' #add response record type
-        elif dnsPacket.qd: #else we check if its request packet
-            dnsRequestType = self.DNSRecordTypes[dnsPacket.qd.qtype] if dnsPacket.qd.qtype in self.DNSRecordTypes else dnsPacket.qd.qtype #represents dns record type based on the DNSRecordTypes dictionary
+        elif dnsPacket.qd and dnsPacket.qdcount > 0: #else we check if its request packet
+            dnsRequestType = self.DNSRecordTypes[dnsPacket.qd[0].qtype] if dnsPacket.qd[0].qtype in self.DNSRecordTypes else dnsPacket.qd[0].qtype #represents dns record type based on the DNSRecordTypes dictionary
             output += f' {dnsRequestType}' #add request record type
             
         output += f' | Size: {packetSize} bytes' #add the size of the packet
@@ -360,27 +356,27 @@ class DNS_Packet(Default_Packet):
             dnsPacket = self.packet[DNS] #save the dns packet in parameter
             output += f'ID: {dnsPacket.id}\n\n' #id of the dns packet
             if dnsPacket.qr == 1: #means its a response packet
-                if dnsPacket.an: #if dns packet is response packet
-                    dnsResponseType = self.DNSRecordTypes[dnsPacket.an.type] if dnsPacket.an.type in self.DNSRecordTypes else dnsPacket.an.type #represents dns record type based on the DNSRecordTypes dictionary
-                    dnsResponseClass = self.DNSClassTypes[dnsPacket.an.rclass] if dnsPacket.an.rclass in self.DNSClassTypes else dnsPacket.an.rclass #represents dns class type based on the DNSClassTypes dictionary
+                if dnsPacket.an and dnsPacket.ancount > 0: #if dns packet is response packet
+                    dnsResponseType = self.DNSRecordTypes[dnsPacket.an[0].type] if dnsPacket.an[0].type in self.DNSRecordTypes else dnsPacket.an[0].type #represents dns record type based on the DNSRecordTypes dictionary
+                    dnsResponseClass = self.DNSClassTypes[dnsPacket.an[0].rclass] if dnsPacket.an[0].rclass in self.DNSClassTypes else dnsPacket.an[0].rclass #represents dns class type based on the DNSClassTypes dictionary
                     output += f'Type: Response\n\n' #add type of packet to output
-                    output += self.fitStr('Response Name:', dnsPacket.an.rrname) #add repsonse name to output
+                    output += self.fitStr('Response Name:', dnsPacket.an[0].rrname) #add repsonse name to output
                     output += f'Response Type: {dnsResponseType}, ' #add response type to output
                     output += f'Response Class: {dnsResponseClass}\n\n' #add response class to output
-                    output += f'Num Responses: {len(dnsPacket.an)}\n\n' #add number of responses to output
-                    if hasattr(dnsPacket.an, 'rdata'): #check if rdata attribute exists
-                        output += self.fitStr('Response Data:', dnsPacket.an.rdata) #specify the rdata parameter
+                    output += f'Response Count: {dnsPacket.ancount}\n\n' #add number of responses to output
+                    if hasattr(dnsPacket.an[0], 'rdata'): #check if rdata attribute exists
+                        output += self.fitStr('Response Data:', dnsPacket.an[0].rdata) #specify the rdata parameter
             else: #means its a request packet
-                if dnsPacket.qd:
-                    dnsRequestType = self.DNSRecordTypes[dnsPacket.qd.qtype] if dnsPacket.qd.qtype in self.DNSRecordTypes else dnsPacket.qd.qtype #represents dns record type based on the DNSRecordTypes dictionary
-                    dnsRequestClass = self.DNSClassTypes[dnsPacket.qd.qclass] if dnsPacket.qd.qclass in self.DNSClassTypes else dnsPacket.qd.qclass #represents dns class type based on the DNSClassTypes dictionary
+                if dnsPacket.qd and dnsPacket.qdcount > 0:
+                    dnsRequestType = self.DNSRecordTypes[dnsPacket.qd[0].qtype] if dnsPacket.qd[0].qtype in self.DNSRecordTypes else dnsPacket.qd[0].qtype #represents dns record type based on the DNSRecordTypes dictionary
+                    dnsRequestClass = self.DNSClassTypes[dnsPacket.qd[0].qclass] if dnsPacket.qd[0].qclass in self.DNSClassTypes else dnsPacket.qd[0].qclass #represents dns class type based on the DNSClassTypes dictionary
                     output += f'Type: Request\n\n' #add type of packet to output
-                    output += self.fitStr('Request Name:', dnsPacket.qd.qname) #add request name to output
+                    output += self.fitStr('Request Name:', dnsPacket.qd[0].qname) #add request name to output
                     output += f'Request Type: {dnsRequestType}, ' #add request type to output
                     output += f'Request Class: {dnsRequestClass}\n\n' #add request class to output
-                    output += f'Num Requests: {len(dnsPacket.qd)}\n\n' #add num of requests to output
+                    output += f'Request Count: {dnsPacket.qdcount}\n\n' #add num of requests to output
         return output
-    
+
 #---------------------------------------------------------DNS-END-----------------------------------------------------------#
 
 #-----------------------------------------------------------TLS-------------------------------------------------------------#
@@ -557,7 +553,7 @@ class ARP_Packet(Default_Packet):
         srcIp = self.packet[ARP].psrc #represents arp source ip address
         dstMac = self.packet[ARP].hwdst #represents arp destination mac address
         dstIp = self.packet[ARP].pdst #represents arp destination ip address
-        arpOperation = 'Request' if self.packet[ARP].op == 1 else 'Reply' #represents arp operation
+        arpOperation = 'Request' if self.packet[ARP].op == 1 else 'Response' #represents arp operation
         packetSize = len(self.packet) #represents the packet size 
         output += f'{self.name} Packet: ({srcIp}):({srcMac}) --> ({dstIp}):({dstMac}) Type: {arpOperation} | Size: {packetSize} bytes' #add the packet info to output
         return output
@@ -575,7 +571,7 @@ class ARP_Packet(Default_Packet):
             output += f'Source IP: {self.packet[ARP].psrc}\n\n' #add arp source ip address
             output += f'Destination IP: {self.packet[ARP].pdst}\n\n' #add arp destination ip address
             output += f'Packet Size: {len(self.packet)} bytes\n\n' #add packet size
-            output += f'Operation: {"Request" if self.packet[ARP].op == 1 else "Reply"}\n\n' #add the arp operation to output
+            output += f'Operation: {"Request" if self.packet[ARP].op == 1 else "Response"}\n\n' #add the arp operation to output
             output += f'Hardware Type: {hardwareType}\n\n' #add the hardware type to output
             output += f'Hardware Length: {self.packet[ARP].hwlen} bytes\n\n' #add hardware length to output
             output += f'Protocol Type: {protocolType}\n\n' #add protocol type to output
@@ -669,690 +665,818 @@ class STP_Packet(Default_Packet):
 
 # ---------------------------------------------------------STP-END----------------------------------------------------------#
 
-#----------------------------------------------------HELPER-FUNCTIONS-------------------------------------------------------#
+#--------------------------------------------------INTERFACE-INFORMATION----------------------------------------------------#
+#static class that represents information of network interfaces
+class InterfaceInformation(ABC):
+    #this list represents the usual network interfaces that are available in various platfroms
+    supportedInterfaces = ['eth', 'wlan', 'en', 'enp', 'wlp', 'Ethernet', 'Wi-Fi', 'lo', '\\Device\\NPF_Loopback']
 
-#method to print all available interfaces
-def getAvailableInterfaces():
-    #get a list of all available network interfaces
-    interfaces = get_if_list() #call get_if_list method to retrieve the available interfaces
-    if interfaces: #if there are interfaces we print them
-        print('Available network interfaces:')
-        i = 1 #counter for the interfaces 
-        for interface in interfaces: #print all availabe interfaces
-            if sys.platform.startswith('win32'): #if ran on windows we convert the guid number
-                print(f'{i}. {guidToStr(interface)}')
-            else: #else we are on other os so we print the interface 
-                print(f'{i}. {interface}')
-            i += 1
-    else: #else no interfaces were found
-        print('No network interfaces found.')
-
-
-#method for retrieving interface name from GUID number (Windows only)
-def guidToStr(guid):
-    try: #we try to import the specific windows method from scapy library
-        from scapy.arch.windows import get_windows_if_list
-    except ImportError as e: #we catch an import error if occurred
-        print(f'Error importing module: {e}') #print the error
-        return guid #we exit the function
-    interfaces = get_windows_if_list() #use the windows method to get list of guid number interfaces
-    for interface in interfaces: #iterating over the list of interfaces
-        if interface['guid'] == guid: #we find the matching guid number interface
-            return interface['name'] #return the name of the interface associated with guid number
-    return guid #else we didnt find the guid number so we return given guid
+    #method to print all available interfaces
+    def printAvailableInterfaces():
+        #get a list of all available network interfaces
+        interfaces = get_if_list() #call get_if_list method to retrieve the available interfaces
+        if interfaces: #if there are interfaces we print them
+            print('Available network interfaces:')
+            i = 1 #counter for the interfaces 
+            for interface in interfaces: #print all availabe interfaces
+                if sys.platform.startswith('win32'): #if ran on windows we convert the guid number
+                    print(f'{i}. {InterfaceInformation.guidToStr(interface)}')
+                else: #else we are on other os so we print the interface 
+                    print(f'{i}. {interface}')
+                i += 1
+        else: #else no interfaces were found
+            print('No network interfaces found.')
 
 
-#method for retrieving the network interfaces
-def getNetworkInterfaces():
-    networkNames = ['eth', 'wlan', 'en', 'enp', 'wlp', 'lo', 'Ethernet', 'Wi-Fi', '\\Device\\NPF_Loopback'] #this list represents the usual network interfaces that are available in various platfroms
-    interfaces = get_if_list() #get a list of the network interfaces
-    if sys.platform.startswith('win32'): #if current os is Windows we convert the guid number to interface name
-        interfaces = [guidToStr(interface) for interface in interfaces] #get a new list of network interfaces with correct names instead of guid numbers
-    matchedInterfaces = [interface for interface in interfaces if any(interface.startswith(name) for name in networkNames)] #we filter the list to retrieving ethernet and wifi interfaces
-    return matchedInterfaces #return the matched interfaces as list
-
-#-----------------------------------------------------HANDLE-FUNCTIONS------------------------------------------------------#
-#method that handles TCP packets
-def handleTCP(packet):
-    global packetCounter
-    TCP_Object = TCP_Packet(packet, packetCounter) #create a new object for packet
-    packetDictionary[TCP_Object.getId()] = TCP_Object #insert it to packet dictionary
-    packetCounter += 1 #increase the counter
-    return TCP_Object #finally return the object
-
-#method that handles UDP packets
-def handleUDP(packet):
-    global packetCounter
-    UDP_Object = UDP_Packet(packet, packetCounter) #create a new object for packet
-    packetDictionary[UDP_Object.getId()] = UDP_Object #insert it to packet dictionary
-    packetCounter += 1 #increase the counter
-    return UDP_Object #finally return the object
-
-#method that handles HTTP packets
-def handleHTTP(packet):
-    global packetCounter
-    HTTP_Object = HTTP_Packet(packet, packetCounter) #create a new object for packet
-    packetDictionary[HTTP_Object.getId()] = HTTP_Object #insert it to packet dictionary
-    packetCounter += 1 #increase the counter
-    return HTTP_Object #finally return the object
-
-#method that handles DNS packets
-def handleDNS(packet):
-    global packetCounter
-    DNS_Object = DNS_Packet(packet, packetCounter) #create a new object for packet
-    packetDictionary[DNS_Object.getId()] = DNS_Object #insert it to packet dictionary
-    packetCounter += 1 #increase the counter
-    return DNS_Object #finally return the object
-
-#method that handles TLS packets
-def handleTLS(packet):
-    global packetCounter
-    if packet[TLS].type == 22: #we need to capture handshakes TLS packets so 22 is the correct type
-        TLS_Object = TLS_Packet(packet, packetCounter) #create a new object for packet
-        packetDictionary[TLS_Object.getId()] = TLS_Object #insert it to packet dictionary
-        packetCounter += 1 #increase the counter
-        return TLS_Object #finally return the object
-    return None #else we return none
-
-#method that handles ICMP packets
-def handleICMP(packet):
-    global packetCounter 
-    ICMP_Object = ICMP_Packet(packet, packetCounter) #create a new object for packet
-    packetDictionary[ICMP_Object.getId()] = ICMP_Object #insert it to packet dictionary
-    packetCounter += 1 #increase the counter
-    return ICMP_Object #finally return the object
-
-#method that handles DHCP packets
-def handleDHCP(packet):
-    global packetCounter
-    validParameters = [1, 2, 3, 5, 7, 8] #list that represents the valid paramteters for DHCP
-    if packet[DHCP].options[0][1] in validParameters: #we check if its a valid parameter
-        DHCP_Object = DHCP_Packet(packet, packetCounter) #create a new object for packet
-        packetDictionary[DHCP_Object.getId()] = DHCP_Object #insert it to packet dictionary
-        packetCounter += 1 #increase the counter
-        return DHCP_Object #finally return the object
-    return None #else we return none
-
-#method that handles ARP packets
-def handleARP(packet):
-    global packetCounter
-    ARP_Object = ARP_Packet(packet, packetCounter) #create a new object for packet
-    packetDictionary[ARP_Object.getId()] = ARP_Object #insert it to packet dictionary
-    packetCounter += 1 #increase the counter
-    return ARP_Object #finally return the object
-
-#method that handles IGMP packets
-def handleIGMP(packet):
-    global packetCounter
-    validParameters = [17, 18, 22, 23] #list that represents the valid paramteters for IGMP
-    if packet[IGMP].type in validParameters: #we check if its a valid parameter
-        IGMP_Object = IGMP_Packet(packet, packetCounter) #create a new object for packet
-        packetDictionary[IGMP_Object.getId()] = IGMP_Object #insert it to packet dictionary
-        packetCounter += 1 #increase the counter
-        return IGMP_Object #finally return the object
-    return None #else we return none
-
-#method that handles STP packets
-def handleSTP(packet):
-    global packetCounter
-    STP_Object = STP_Packet(packet, packetCounter) #create a new object for packet
-    packetDictionary[STP_Object.getId()] = STP_Object #insert it to packet dictionary
-    packetCounter += 1 #increase the counter
-    return STP_Object #finally return the object
-
-#---------------------------------------------------HANDLE-FUNCTIONS-END----------------------------------------------------#
-
-packetDictionary = {} #initialize the packet dictionary
-packetCounter = 0 #global counter for dictionary elements
-
-#---------------------------------------------------HELPER-FUNCTIONS-END----------------------------------------------------#
-
-#---------------------------------------------------PacketCaptureThread-----------------------------------------------------#
-#thread class for capturing packets in real time
-class PacketCaptureThread(QThread):
-    packetCaptured = pyqtSignal(int) #signal for the thread to update the main for changes
-    setGUIState = pyqtSignal(bool) #signal for the thread to set the GUI elements from the main window
-    permissionError = pyqtSignal() #signal for permission error to tell GUI to show messagebox for error
-    interface = None #interface of network 
-    packetQueue = None #packet queue pointer for the thread
-    packetFilter = None #represents the packet type filter for sniffer
-    PortandIp = None #string that represents port and ip for sniffer to filter with
-    packetList = None #packet list for loading scan with pcap file
-    stopCapture = False #flag for capture status
-
-    def __init__(self, packetQueue, packetFilter, PortandIp, interface='', packetList=None):
-        super(PacketCaptureThread, self).__init__()
-        self.interface = interface #initialize the network interface if given
-        self.packetQueue = packetQueue #setting the packetQueue from the packet sniffer class
-        self.packetFilter = packetFilter #set the packet filter for scapy sniff method
-        self.PortandIp = PortandIp #set the port and ip string for filthering with desired pord and ip
-        self.packetList = packetList #set the packet list if given
-        packetBuffer = 1000 if self.packetList else 500 #buffer for number of packets added to GUI
-        self.updateTimer = QTimer(self) #initialzie the QTimer
-        self.updateTimer.timeout.connect(lambda: self.packetCaptured.emit(packetBuffer)) #connect the signal to gui to update the packet list when timer elapses
-        self.updateTimer.start(2000) #setting the timer to elapse every 2 seconds (can adjust according to the load)
+    #method for retrieving interface name from GUID number (Windows only)
+    def guidToStr(guid):
+        try: #we try to import the specific windows method from scapy library
+            from scapy.arch.windows import get_windows_if_list
+        except ImportError as e: #we catch an import error if occurred
+            print(f'Error importing module: {e}') #print the error
+            return guid #we exit the function
+        interfaces = get_windows_if_list() #use the windows method to get list of guid number interfaces
+        for interface in interfaces: #iterating over the list of interfaces
+            if interface['guid'] == guid: #we find the matching guid number interface
+                return interface['name'] #return the name of the interface associated with guid number
+        return guid #else we didnt find the guid number so we return given guid
 
 
-    #methdo that handles stopping the scan
-    def stop(self):
-        self.stopCapture = True #setting the stop flag to true will stop the loop in sniff
+    #method for retrieving the network interfaces
+    def getNetworkInterfaces():
+        interfaces = get_if_list() #get a list of the network interfaces
+        if sys.platform.startswith('win32'): #if current os is Windows we convert the guid number to interface name
+            interfaces = [InterfaceInformation.guidToStr(interface) for interface in interfaces] #get a new list of network interfaces with correct names instead of guid numbers
+        matchedInterfaces = [interface for interface in interfaces if any(interface.startswith(name) for name in InterfaceInformation.supportedInterfaces)] #we filter the list to retrieving interfaces
+        return matchedInterfaces #return the matched interfaces as list
 
+#------------------------------------------------INTERFACE-INFORMATION-END--------------------------------------------------#
 
-    #method for sniff method of scapy to know status of flag 
-    def checkStopFlag(self, packet):
-        return self.stopCapture #return the stopCapture flag
-
-
-    #method that handles the packet capturing
-    def PacketCapture(self, packet): 
-        #for each packet we receive we send it to the dict to determine its identity and call the necessary handle method
-        for packetType, handler in self.packetFilter.items():
-            if packet.haslayer(packetType): #if we found matching packet we call its handle method
-                handledPacket = handler(packet) #call handler method of each packet
-                if handledPacket != None: #check if its not none
-                    self.packetQueue.put(handledPacket.info()) #we put the packet's info in the queue for later use 
-                break #break from the loop when handled the packet
-
-
-    #run method for the thread, initialzie the scan, call scapy sniff method with necessary parameters
-    def run(self):
-        self.setGUIState.emit(False) #set GUI elements to be unclickable for scan
-        if self.packetList is not None: #if true we received a packet list meaning we need to load scan from pcap file
-            for packet in self.packetList: #iterate through the packet list 
-                self.PacketCapture(packet) #call packetCapture method for each packet in list
-            while not self.packetQueue.empty(): #now we keep thread alive until all packets were loaded
-                if self.packetQueue.empty(): #if true the queue is empty so we can finish
-                    break #break the loop to end loading
-                QThread.sleep(2) #we give the thread to sleep for 2 seconds for gui responsiveness
-        else: #else we need to start a regular scan
-            try: #we call sniff with desired interface and filters for port and ip
-                sniff(iface=self.interface, prn=self.PacketCapture, filter=self.PortandIp, stop_filter=self.checkStopFlag, store=0)
-            except PermissionError: #if user didn't run in administrative privileges we emit signal to show messagebox with error
-                self.permissionError.emit() #emit a signal to GUI to show permission error message box
-                print('Permission denied. Please run again with administrative privileges.') #print permission error message in terminal
-            except Exception as e: #we catch an exception if something happend while sniffing
-                print(f'An error occurred while sniffing: {e}') #print error message in terminal
-        self.setGUIState.emit(True) #after thread finishes we set the GUI elements to be clickable again
-
-#--------------------------------------------------PacketCaptureThread-END--------------------------------------------------#
-
-#-------------------------------------------------------Application---------------------------------------------------------#
-#main class for the application that handles the GUI and the packet sniffing
-class PacketSniffer(QMainWindow):
+#------------------------------------------------------SNIFFSERPENT---------------------------------------------------------#
+#main class for SniffSerpent that handles the GUI and the packet sniffing
+class SniffSerpent(QMainWindow):
+    ui = None #represents main ui object of GUI with all our objects
+    server = None #represents listening server for our app to make sure one instance is showing
+    serverName = 'SniffSerpent' #represents our listening server name
+    packetDictionary = {} #initialize the packet dictionary
+    packetQueue = [] #queue for packets before adding them to listView
+    packetCounter = 0 #counter for number of packets captured
+    packetThreshold = 500 #represents the threshold for number of packets
+    packetTimerTimout = 5000 #represents the timeout for the timer (5 seconds)
+    packetTimer = None #represents the timer for packet capture
     packetCaptureThread = None #current thread that capturing packets 
-    packetModel = None #packet list model for QListView 
-    packetQueue = None #queue for packets before adding them to list (thread safe)
+    packetModel = None #packet list model for QListView
     validIp = True #set validIp flag to true
     isClosing = False #set isClosing flag to false
 
     def __init__(self):
-        super(PacketSniffer, self).__init__()
-        loadUi('SniffSerpent.ui', self) #load the ui file of the sniffer
-        self.initUI() #call init method
+        super(SniffSerpent, self).__init__()
+        self.ui = Ui_SniffSerpent() #set mainwindow ui object
+        self.ui.setupUi(self) #load the ui file of the sniffer
         self.packetModel = QStandardItemModel() #set the QListView model for adding items to it
-        self.PacketList.setModel(self.packetModel) #set the model for the packetlist in gui
-        self.packetQueue = Queue() #initialize the packet queue
+        self.packetTimer = QTimer(self) #initialize the timer for packet capture
+        self.initUI() #call init method
+
         
-    
     #method to initialize GUI methods and events
     def initUI(self):
         self.setWindowTitle('SniffSerpent') #set title of window
         self.setWindowIcon(QIcon('images/serpent.ico')) #set icon of window
-        infoImageLabel = ImageLabel(1548, 10, 40, 40, 'images/infoTitle.png', True, self) #create a image label for info icon
-        infoImageLabel.setToolTip('<html><head/><body><p><span style="font-size:10pt;">General information about SniffSerpent.</span></p></body></html>') #set toolTip for info icon
-        self.StartScanButton.clicked.connect(self.StartScanClicked) #add method to handle start scan button
-        self.StopScanButton.clicked.connect(self.StopScanClicked) #add method to handle stop scan button 
-        self.LoadScanButton.clicked.connect(self.LoadScanClicked) #add method to handle load scan button
-        self.ClearButton.clicked.connect(self.ClearClicked) #add method to handle clear button 
-        self.SaveScanButton.clicked.connect(self.SaveScanClicked) #add method to handle save scan button
-        infoImageLabel.clicked.connect(self.infoImageLabelClicked) #add method to handle clicks on infoImageLabel
-        self.PacketList.doubleClicked.connect(self.handleItemDoubleClicked) #add method to handle clicks on the items in packet list
+        self.ui.PacketList.setModel(self.packetModel) #set the model for the packetlist in gui
+        self.ui.infoLabel.mousePressEvent = lambda event: self.infoLabelClicked() #add method to handle info label
+        self.ui.StartScanButton.clicked.connect(self.startScanClicked) #add method to handle start scan button
+        self.ui.StopScanButton.clicked.connect(self.stopScanClicked) #add method to handle stop scan button 
+        self.ui.LoadScanButton.clicked.connect(self.loadScanClicked) #add method to handle load scan button
+        self.ui.ClearButton.clicked.connect(self.clearClicked) #add method to handle clear button 
+        self.ui.SaveScanButton.clicked.connect(self.saveScanClicked) #add method to handle save scan button
+        self.ui.PacketList.doubleClicked.connect(self.handleItemDoubleClicked) #add method to handle clicks on the items in packet list
+        self.packetTimer.timeout.connect(self.updatePacketListView) #connect the timeout signal to the method that updates the packet listView
         self.setLineEditValidate() #call the method to set the validators for the QLineEdit for port and ip
-        self.IPLineEdit.textChanged.connect(self.checkIPValidity) #connect signal for textChanged for IP to determine its validity
-        self.initComboBox() #set the combobox interface names 
+        self.ui.IPLineEdit.textChanged.connect(self.checkIPValidity) #connect signal for textChanged for IP to determine its validity
+        self.initComboBox() #set the combobox interface names
         self.center() #make the app open in center of screen
-        self.show() #show the application
 		
-
-    #method for closing the program and managing the packetCapture thread
-    def closeEvent(self, event):
-        if self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #if true we have a scan running
-            self.isClosing = True #set the isClosing flag to true to indicate that user wants to close program
-            self.StopScanClicked() #call StopScanClicked method to stop the scan
-        event.accept() #accept the close event
-
 
     #method for making the app open in the center of screen
     def center(self):
         qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
+        cp = QGuiApplication.primaryScreen().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
-    
 
-    #method to check the IP Line edit validity in gui (using signals)
-    def checkIPValidity(self):
-        ip = self.IPLineEdit.text().strip() #get the ip user entered in gui
-        if ip: #if ip is set, we check
-            octets = ip.split('.') #splite the ip into 4 octets
-            self.validIp = (len(octets) == 4 and all(o.isdigit() and 0 <= int(o) <= 255 for o in octets))  #check if ip is valid and not missing numbers (e.g 192.168.1.1)
-        else: #else ip is empty so its not specified by user (optional)
-            self.validIp = True #set the validIp flag to true
-        if self.validIp: #if ip is valid we set the default style of the edit line lable
-            style = 'QLineEdit { background-color: rgba(32,33,35,255); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: black; padding: 4px; }'
-            self.IPLineEdit.setStyleSheet(style)
-        else: #else the user input is invalid, we show a red border on the edit line lable for error indication
-            style = 'QLineEdit { background-color: rgba(32,33,35,255); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: rgb(139,0,0); padding: 4px; }'
-            self.IPLineEdit.setStyleSheet(style)
+
+    #method for closing the program and managing the packetCapture thread
+    def closeEvent(self, event):
+        if self.packetCaptureThread != None and self.packetCaptureThread.isRunning(): #if true we have a scan running
+            self.isClosing = True #set the isClosing flag to true to indicate that user wants to close program
+            self.stopScanClicked() #call StopScanClicked method to stop the scan
+        SniffSerpent.closeServer() #close listening server
+        event.accept() #accept the close event
+
+
+    #function for initializing listening server for managing one instance
+    @staticmethod
+    def initServer():
+        #check if server is already initialized
+        if SniffSerpent.server:
+            return True; #return true if already initialized
+
+        #create server to listen for new instances
+        SniffSerpent.server = QLocalServer()
+
+        #check if failed to listen on our server name, if so we remove old entries and try again
+        if not SniffSerpent.server.listen(SniffSerpent.serverName):
+            SniffSerpent.server.removeServer(SniffSerpent.serverName) #clear server name entries
+            #try to listen again for our server name, if failed we return false
+            if not SniffSerpent.server.listen(SniffSerpent.serverName):
+                SniffSerpent.server = None #set server back to none
+                return False #return false to indicate failure
+        return True #return true if server listening successfully
+
+
+    #function for checking if listening server is running
+    @staticmethod
+    def checkServer():
+        socket = QLocalSocket() #create socket for checking is server running
+        socket.connectToServer(SniffSerpent.serverName) # try to connect to server
+        #wait for server to response to our request,if we receive response we return true
+        if socket.waitForConnected(100):
+            return True #return true to indicate that server is running
+        return False #return false to indicate that server is down
+
+
+    #function for closing listening server
+    @staticmethod
+    def closeServer():
+        #check if listening server is initialized
+        if SniffSerpent.server:
+            SniffSerpent.server.close() #close listening server
+            QLocalServer.removeServer(SniffSerpent.serverName) #remove server entry
+            SniffSerpent.server = None #set server back to none
     
 
     #method for setting the settings for ip and port line edit lables
     def setLineEditValidate(self):
-        IPRegex = QRegExp(r"^((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)$") #regex for IP template (192.168.1.1)
-        IPValidator = QRegExpValidator(IPRegex) #create the validator for ip using the regex
-        portValidator = QIntValidator(0, 65535) #create a validator for port (number between 0 to 65535)
-        self.IPLineEdit.setValidator(IPValidator) #set validator for IP
-        self.PortLineEdit.setValidator(portValidator) #set validaotr for port
-    
-    
+        IPValidator = QRegularExpressionValidator(QRegularExpression(r'^((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)$')) #create the validator for ip using the regex
+        portValidator = QRegularExpressionValidator(QRegularExpression(r'^(0|[1-9]\d{0,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$')) #create a validator for port (between 0 to 65535)
+        self.ui.IPLineEdit.setValidator(IPValidator) #set validator for IP
+        self.ui.PortLineEdit.setValidator(portValidator) #set validaotr for port
+
+
+    #method to check the IP LineEdit validity in gui
+    def checkIPValidity(self):
+        ip = self.ui.IPLineEdit.text().strip() #get the ip user entered in gui
+
+        #check if ip is valid and not empty
+        if ip: #we check if ip is not empty
+            octets = ip.split('.') #splite the ip into 4 octets
+            self.validIp = (len(octets) == 4 and all(octet.isdigit() and 0 <= int(octet) <= 255 for octet in octets)) #check if ip is valid and not missing numbers (e.g 192.168.1.1)
+        else: #else ip is empty we set the validIp flag to false
+            self.validIp = True #set the validIp flag to true
+
+        #check IP validity and set the style of the LineEdit
+        if self.validIp: #if ip is valid we set the default style of the edit line lable
+            style = 'QLineEdit { background-color: rgba(32,33,35,255); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: black; padding: 4px; }'
+            self.ui.IPLineEdit.setStyleSheet(style)
+        else: #else the user input is invalid, we show a red border on the edit line lable for error indication
+            style = 'QLineEdit { background-color: rgba(32,33,35,255); border-radius: 15px; border-style: outset; border-width: 2px; border-radius: 15px; border-color: rgb(139,0,0); padding: 4px; }'
+            self.ui.IPLineEdit.setStyleSheet(style)
+
+
     #method for setting the parameters for the interfaces combobox 
     def initComboBox(self):
-        self.InterfaceComboBox.view().window().setWindowFlags(Qt.Popup | Qt.FramelessWindowHint)
-        self.InterfaceComboBox.view().window().setAttribute(Qt.WA_TranslucentBackground)
-        interfaces = getNetworkInterfaces() #call our method to receive the network interfaces
+        interfaces = InterfaceInformation.getNetworkInterfaces() #call our method to receive the network interfaces
         interfaces = ['Loopback' if interface == '\\Device\\NPF_Loopback' else interface for interface in interfaces] #replace the loopback interface name
         if interfaces: #if not empty we add them to the combobox
-            self.InterfaceComboBox.addItems(interfaces) #add items to combobox
+            self.ui.InterfaceComboBox.addItems(interfaces) #add items to combobox
         if len(interfaces) >= 2: #if we have more then one available interface 
-            self.InterfaceComboBox.addItem('All') #we add "All" option to scan all available interfaces
+            self.ui.InterfaceComboBox.addItem('All') #we add "All" option to scan all available interfaces
     
     
-    #method that return desktop directory if available, else the home directory
-    def getDirectory(self):
-        defaultDirectory = os.path.join(os.path.expanduser('~'), 'Desktop') #set default directory to be desktop 
-        if not os.path.exists(defaultDirectory): #if desktop directory isn't available we try specific os paths
-            if sys.platform.startswith('darwin'):  #if os is macOS
-                defaultDirectory = os.path.join(os.path.join('/Users/', os.getlogin()), 'Desktop') #set macOS specific desktop path
-            elif sys.platform.startswith('linux'):  #if os is Linux
-                defaultDirectory = os.path.join(os.path.join('/home/', os.getlogin()), 'Desktop') #set Linux specific desktop path
-            else: #else we set the default directory to home directory
-                defaultDirectory = os.path.expanduser('~') #setting the default directory to be home directory
-        return defaultDirectory
+    #method for showing file dialog for user to choose his desired path and file name
+    def getPathFromFileDialog(self, title, fileName, extensions, location='desktop'):
+        options = QFileDialog.Options() #represents options for file dialog
+        defaultDirectory = '' #represents default directory for file dialog
+
+        #check if location given, if so set desired directory for file dialog
+        if location == 'desktop':
+            defaultDirectory = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
+        elif location == 'home':
+            defaultDirectory = QStandardPaths.writableLocation(QStandardPaths.HomeLocation)
+
+        filePath, fileType = QFileDialog.getSaveFileName(
+            parent=None, #represents parent window
+            caption=title, #represents dialog title
+            dir=os.path.join(defaultDirectory, fileName), #represents default path with filename
+            filter=extensions, #represents supported extensions
+            options=options #represents options for file dialog
+        )
+        return filePath, fileType
+
+
+    #method for showing file dialog for user to choose his desired file path
+    def getPathFromOpenFileDialog(self, title, extensions, location='desktop'):
+        options = QFileDialog.Options() #represents options for file dialog
+        defaultDirectory = '' #represents default directory for file dialog
+
+        #check if location given, if so set desired directory for file dialog
+        if location == 'desktop':
+            defaultDirectory = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
+        elif location == 'home':
+            defaultDirectory = QStandardPaths.writableLocation(QStandardPaths.HomeLocation)
+
+        filePath, fileType = QFileDialog.getOpenFileName(
+            parent=None, #represents parent window
+            caption=title, #represents dialog title
+            dir=defaultDirectory, #represents default path
+            filter=extensions, #represents supported extensions
+            options=options #represents options for file dialog
+        )
+        return filePath, fileType
+
+
+    #method that updates the packet timer state
+    @Slot(bool)
+    def updatePacketTimer(self, state):
+        if state: #check if the state is true
+            self.packetTimer.start(self.packetTimerTimout) #start the packet timer
+        else: 
+            self.packetTimer.stop() #stop the packet timer
 
     
-    #method for sniff method for permission error exceptions
-    def sniffErrorMessageBox(self):
-        CustomMessageBox('Permission Denied', 'Sniffing unavailable, please run again with administrative privileges.', 'Critical', True) #show permission error message box
-        sys.exit(1) #exit the program due to insufficient privileges
+    #method for sniff thread to show message box in GUI
+    @Slot(str, str, str)
+    def captureThreadMessageBox(self, title, message, iconType):
+        CustomMessageBox.showMessageBox(title, message, iconType) #show message box for capture thread
 
 
     #method for initialize the packet thread
-    def initPacketThread(self, packetFilter, PortAndIP, interface='', packetList=None):
-        self.packetCaptureThread = PacketCaptureThread(self.packetQueue, packetFilter, PortAndIP, interface, packetList) #initialzie the packet thread with the queue we initialized and interface
-        self.packetCaptureThread.packetCaptured.connect(self.updatePacketList) #connect the packet thread to updatePacketList method
-        self.packetCaptureThread.setGUIState.connect(self.handleGUIState) #connect the packet thread to handleGUIState method
-        self.packetCaptureThread.permissionError.connect(self.sniffErrorMessageBox) #connnect the packet thread to sniffErrorMessageBox method
+    def initPacketThread(self, interface='', packetFilter=None, portAndIP='', packetList=None):
+        self.packetCaptureThread = PacketCaptureThread(interface=interface, packetFilter=packetFilter, portAndIP=portAndIP, packetList=packetList) #initialzie the packet thread with the queue we initialized and interface
+        self.packetCaptureThread.updatePacketQueue.connect(self.updatePacketQueue) #connect the packet thread to updatePacketQueue method
+        self.packetCaptureThread.updatePacketTimer.connect(self.updatePacketTimer) #connect the packet thread to updatePacketTimer method
+        self.packetCaptureThread.showMessageBox.connect(self.captureThreadMessageBox) #connnect the packet thread to captureThreadMessageBox method
         self.packetCaptureThread.start() #calling the run method of the thread to start the scan    
 
 
     #method to handle the start scan button, initializing the packet sniffing
-    def StartScanClicked(self):
-        if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning(): #checks if no thread is set for sniffer  
-            try:
-                packetFilter = self.packetFilter() #call packet filter for filtered dictionary based on check boxes state
-                PortAndIP = self.getPortIP() #call the getPortId method to recevie the input for port and ip from user
-            except (Exception, ValueError) as e: #if an exception is raised we show a messagebox for user with the error
-                title = 'Format Error' if not self.validIp else 'Type Error'
-                icon = 'Warning' if title == 'Format Error' else 'Critical'
-                CustomMessageBox(title, str(e), icon) #show error message box
+    def startScanClicked(self):
+        if not self.packetCaptureThread or not self.packetCaptureThread.isRunning(): #checks if no thread is set for sniffer  
+            packetFilter = self.getPacketFilter() #call getPacketFilter method for filtered list based on check boxes state
+            portAndIP = self.getPortIP() #call the getPortId method to recevie the input for port and ip from user
+            
+            if packetFilter == None or portAndIP == None: #if the packetFilter or portAndIP are not valid
                 return #stop the initialization of scan
-            self.ClearClicked() #call clear method for clearing the memory and screen for new scan
-            interface = self.InterfaceComboBox.currentText() #get the chosen network interface from combobox
-            if interface == '': #if the input is empty it means no availabe interface found
-                CustomMessageBox('No Available Interface', 'Cannot find available network interface.', 'Critical', False) #show error message box
+
+            interface = self.ui.InterfaceComboBox.currentText() #get the chosen network interface from combobox
+            if not interface: #if the input is empty it means no availabe interface found
+                CustomMessageBox.showMessageBox('No Available Interface', 'Cannot find available network interface.', 'Critical') #show error message box
                 return #stop the initialization of scan
-            elif interface == 'All': #if user chose "All" option so we scan all available network interfaces
-                self.initPacketThread(packetFilter, PortAndIP) #initialzie the packet thread without specifing a interface, we scan all interfaces
-            elif interface == 'Loopback': #if true we need to scan on loopback interface on windows
-                interface = '\\Device\\NPF_Loopback' #set interface to be loopback interface name
-                self.initPacketThread(packetFilter, PortAndIP, interface) #initialzie the packet thread
-            else: #if true it means we need to scan on a specific interface
-                self.initPacketThread(packetFilter, PortAndIP, interface) #initialzie the packet thread
-            self.StartScanButton.setEnabled(False) #set the scan button to be unclickable while scan in progress
+            else:
+                self.clearClicked() #call clear method for clearing the memory and screen for new scan
+                self.handleGUIState(False) #we set the GUI elements to be unclickable while scan in progress
+                self.ui.StartScanButton.setEnabled(False) #set the scan button to be unclickable while scan in progress
+
+                if interface == 'All': #if user chose "All" option so we scan all available network interfaces
+                    self.initPacketThread(packetFilter=packetFilter, portAndIP=portAndIP) #initialzie the packet thread without specifing a interface, we scan all interfaces
+                else: #if true it means we need to scan on a specific interface
+                    interface = '\\Device\\NPF_Loopback' if interface == 'Loopback' else interface #set the interface to be loopback interface name if user chose loopback
+                    self.initPacketThread(interface=interface, packetFilter=packetFilter, portAndIP=portAndIP) #initialzie the packet thread
         else: #else we show error message
-            CustomMessageBox('Scan Running', 'Scan in progress!', 'Warning', False) #show error message box
+            CustomMessageBox.showMessageBox('Scan Running', 'Scan in progress!', 'Warning') #show error message box
 
 
     #method to handle the stop scan button, stops the packet sniffing
-    def StopScanClicked(self):
-        if self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #checks if there is a running thread
-            self.packetCaptureThread.stop() #calls stop method of the thread 
-            self.packetCaptureThread.exit() #calls exit method of the thread 
-            self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan 
+    def stopScanClicked(self):
+        if self.packetCaptureThread != None and self.packetCaptureThread.isRunning(): #checks if there is a running thread
+            self.packetCaptureThread.stopThread() #calls stop method of the thread
+            self.packetCaptureThread = None #setting the packetCaptureThread to None for next scan
             self.handleGUIState(True) #we set the GUI elements to be clickable again
-            self.StartScanButton.setEnabled(True) #set scan button back to being clickable
+            self.ui.StartScanButton.setEnabled(True) #set scan button back to being clickable
             if not self.isClosing: #if false we show messagebox
-                CustomMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information', False) #show messagebox
+                CustomMessageBox.showMessageBox('Scan Stopped', 'Packet capturing stopped.', 'Information') #show messagebox
             else: #else user wants to close program
                 self.isClosing = False #set isClosing flag to false
                 self.close() #call close method to close program
     
     
     #method for saving scan data into a text file
-    def SaveScanClicked(self):
-        #if packet dictionary isn't empty and if there's no scan in progress we open the save window
-        if any(packetDictionary.values()) and (self.packetCaptureThread is None or not self.packetCaptureThread.isRunning()):
-            defaultFilePath = os.path.join(self.getDirectory(), 'Packet Scan') #we set the default file name, user can change that in dialog
-            options = QFileDialog.Options() #this is for file options
-            filePath, fileType = QFileDialog.getSaveFileName(self, 'Save Scan Data', defaultFilePath, 'Text File (*.txt);;PCAP File (*.pcap)', options=options) #save the file in a specific path
-            if filePath: #if user chose valid path we continue
-                filePath, _ = os.path.splitext(filePath) #remove extension if added during getSaveFileName method
-                try: 
+    def saveScanClicked(self):
+        try:
+            #if packet dictionary isn't empty and if there's no scan in progress we open the save window
+            if any(self.packetDictionary.values()) and (not self.packetCaptureThread or not self.packetCaptureThread.isRunning()):
+                filePath, fileType = self.getPathFromFileDialog('Save Scan Data', 'Packet Scan', 'Text File (*.txt);;PCAP File (*.pcap)')
+                if filePath: #if user chose valid path we continue
                     if fileType == 'PCAP File (*.pcap)': #means user chose pcap file
-                        packetList = [packet.getPacket() for packet in packetDictionary.values()] #we convert the packet dictionary to list for scapy wrpcap method
-                        wrpcap(filePath + '.pcap', packetList) #call wrpcap method to write the captured packets into pcap file
-                        CustomMessageBox('Scan Saved', 'Saved scan detalis to PCAP file.', 'Information', False) #notify the user for success
-                    else: #else user chose a txt file
-                        with open(filePath + '.txt', 'w') as file: #we open the file for writing
-                            for packet in packetDictionary.values(): #iterating over the packet dictionary to extract the info 
-                                file.write('------------------------------------------------------------------------------------\n\n')
+                        packetList = [packet.getPacket() for packet in self.packetDictionary.values()] #we convert the packet dictionary to list for scapy wrpcap method
+                        wrpcap(filePath, packetList) #call wrpcap method to write the captured packets into pcap file
+                        CustomMessageBox.showMessageBox('Scan Saved', 'Saved scan detalis to PCAP file.', 'Information') #notify the user for success
+                    elif fileType == 'Text File (*.txt)': #else user chose a txt file
+                        with open(filePath, 'w') as file: #we open the file for writing
+                            for packet in self.packetDictionary.values(): #iterating over the packet dictionary to extract the info 
+                                file.write('-' * 85 + '\n\n') #add seperator line to the file
                                 file.write(packet.moreInfo()) #write the packet info to the file (extended information)
-                                file.write('------------------------------------------------------------------------------------\n\n')
-                            CustomMessageBox('Scan Saved', 'Saved scan detalis to text file.', 'Information', False) #notify the user for success
-                except Exception as e: #if error happend we print the error to terminal
-                    print(f'Error occurred while saving: {e}')
-            else: #else user didnt specify a file path
-                CustomMessageBox('Save Error', 'You must choose a file type for saving!', 'Critical', False) #show error message box
-        elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning(): #if scan in progress we notify the user
-            CustomMessageBox('Scan In Progress', 'Cannot save scan while scan in progress!', 'Warning', False) #show error message box  
-        else: #else we show a "saved denied" error if something happend
-            CustomMessageBox('Save Denied', 'No scan data to save.', 'Information', False) #show error message box
+                                file.write('-' * 85 + '\n\n') #add seperator line to the file
+                            CustomMessageBox.showMessageBox('Scan Saved', 'Saved scan detalis to text file.', 'Information') #notify the user for success
+                    else: #else user didnt choose a valid file type
+                        CustomMessageBox.showMessageBox('Save Error', 'You must choose a valid file type for saving!', 'Critical') #show error message box
+            elif self.packetCaptureThread != None and self.packetCaptureThread.isRunning(): #if scan in progress we notify the user
+                CustomMessageBox.showMessageBox('Scan In Progress', 'Cannot save scan while scan in progress!', 'Warning') #show error message box  
+            else: #else we show a "saved denied" error if something happend
+                CustomMessageBox.showMessageBox('Save Denied', 'No scan data to save.', 'Information') #show error message box
+        except Exception as e: #if error happend we print the error to terminal
+            CustomMessageBox.showMessageBox('Save Error', 'Error occured while saving, try again later.', 'Critical') #show error message box
+            print(f'Error occurred while saving: {e}.')
 
     
     #method to handle loading pcap file scan data to interface
-    def LoadScanClicked(self):
-        if self.packetCaptureThread is None or not self.packetCaptureThread.isRunning(): #if there's no scan in progress we can load pcap file
-            try:
-                packetFilter = self.packetFilter() #call packet filter for filtered dictionary based on check boxes state
-                PortAndIP = self.getPortIP() #call the getPortId method to recevie the input for port and ip from user
-            except (Exception, ValueError) as e: #if an exception is raised we show a messagebox for user with the error
-                title = 'Format Error' if not self.validIp else 'Type Error'
-                icon = 'Warning' if title == 'Format Error' else 'Critical'
-                CustomMessageBox(title, str(e), icon) #show error message box
+    def loadScanClicked(self):
+        if not self.packetCaptureThread or not self.packetCaptureThread.isRunning(): #if there's no scan in progress we can load pcap file
+            packetFilter = self.getPacketFilter() #call getPacketFilter method for filtered list based on check boxes state
+            portAndIP = self.getPortIP() #call the getPortId method to recevie the input for port and ip from user
+
+            if packetFilter == None or portAndIP == None: #if the packetFilter or portAndIP are not valid
                 return #stop the loading of pcap file
-            options = QFileDialog.Options() #this is for file options
-            options |= QFileDialog.ReadOnly #making the files read only so user wont be able to edit files while choosing a file
-            filePath, fileType = QFileDialog.getOpenFileName(self, 'Choose PCAP File', self.getDirectory(), 'PCAP File (*.pcap)', options=options) #load the pcap file from a specific path
+
+            filePath, fileType = self.getPathFromOpenFileDialog('Choose PCAP File', 'PCAP File (*.pcap)') #load the pcap file from a specific path
             if filePath and fileType == 'PCAP File (*.pcap)': #if the file path is valid we proceed and the type is pcap
-                self.ClearClicked() #call clear method 
+                self.clearClicked() #call clear method
+                self.handleGUIState(False) #we set the GUI elements to be unclickable while scan in progress
+
                 packetList = rdpcap(filePath) #read all the content of the pcap file and save in variable
-                self.initPacketThread(packetFilter, PortAndIP, None, packetList) #initialize the packet thread with packetList
-                CustomMessageBox('Load Successful', 'Loaded PCAP file successfully, loading data to interface...', 'Information', True) #notify the user for success
-            else: #else user didn't specify a file path
-                CustomMessageBox('Load Error', 'You must choose a PCAP file to load!', 'Critical', False) #show error message box 
+                if packetList:
+                    self.initPacketThread(packetFilter=packetFilter, portAndIP=portAndIP, packetList=packetList) #initialize the packet thread with packetList
+                else:
+                    CustomMessageBox.showMessageBox('Load Error', 'Error loading PCAP file, please try again.', 'Critical')
+                CustomMessageBox.showMessageBox('Load Successful', 'Loaded PCAP file successfully, loading data to interface...', 'Information') #notify the user for success
+            elif filePath and fileType != 'PCAP File (*.pcap)': #else user didn't specify a valid pcap file
+                CustomMessageBox.showMessageBox('Load Error', 'You must choose a PCAP file to load!', 'Critical') #show error message box 
         else: #else we show error message
-            CustomMessageBox('Scan Running', 'Scan in progress, cannot load file.', 'Warning', False) #show error message box
+            CustomMessageBox.showMessageBox('Scan Running', 'Scan in progress, cannot load file.', 'Warning') #show error message box
 
 
     #method to handle clearing the screen
-    def ClearClicked(self):
-        global packetDictionary #declare global parameter for clearing packet dictionary
-        global packetCounter #declare global parameter for resetting the packet counter
-        if self.packetCaptureThread is None or (self.packetCaptureThread is not None and not self.packetCaptureThread.isRunning()):
-            packetDictionary.clear() #clear the main packet dictionary
-            packetCounter = 0 #reset the packet counter
-            self.packetQueue = Queue() #clear the queue if there're packets in
-            self.PacketList.model().clear() #clear the packet list in GUI
-            self.MoreInfoTextEdit.setText('') #clear the extended information in GUI
-        elif self.packetCaptureThread is not None and self.packetCaptureThread.isRunning():
-            CustomMessageBox('Thread Running Error', 'Cannot clear while scan is in progress!', 'Warning', False) #show error message box
+    def clearClicked(self):
+        if not self.packetCaptureThread or (self.packetCaptureThread != None and not self.packetCaptureThread.isRunning()):
+            self.packetDictionary.clear() #clear the main packet dictionary
+            self.packetQueue.clear() #clear the main packet queue
+            self.packetCounter = 0 #reset the packet counter
+            self.ui.PacketList.model().clear() #clear the packet list in GUI
+            self.ui.MoreInfoTextEdit.setText('') #clear the extended information in GUI
+        elif self.packetCaptureThread != None and self.packetCaptureThread.isRunning():
+            CustomMessageBox.showMessageBox('Thread Running Error', 'Cannot clear while scan is in progress!', 'Warning') #show error message box
         
     
     #method that shows information about SniffSerpent 
-    def infoImageLabelClicked(self):
+    def infoLabelClicked(self):
         sniffSerpentInfo = (
         '<br/>SniffSerpent is an easy to use packet sniffer that allows users to capture packets<br/> on various network interfaces, save packet scans in various file types<br/> as well as load PCAP files for future analysis.<br/><br/>'
         'SniffSerpent supports the following packet types:<br/>'
         'TCP, UDP, HTTP, DNS, TLS, ICMP, DHCP, ARP, IGMP, STP.<br/><br/>'
         'SniffSerpent is licensed under the MIT license, all rights are reserved<br/> to Shay Hahiashvili (Shayhha).<br/><br/>'
-        'For questions or feedback, <a href="https://github.com/Shayhha/SniffSerpent">visit SniffSerpent on GitHub</a>.'
+        'For questions or feedback, <a href="https://github.com/Shayhha/SniffSerpent"><span style="text-decoration: underline; color: rgb(0, 116, 217);">visit SniffSerpent on GitHub</span></a>.'
         )
-        CustomMessageBox('SniffSerpent General Information', sniffSerpentInfo, 'NoIcon', False, 700, 360) #shows messagebox with info about the application
+        CustomMessageBox.showMessageBox('SniffSerpent General Information', sniffSerpentInfo, 'NoIcon', 700, 360, False) #shows messagebox with info about the application
 
 
     #method that checks all the check boxs state, return a string with filtered packets
-    def packetFilter(self):
+    def getPacketFilter(self):
+        packetFilter = [] #list of packet kinds for filthering
+
         #check each check box to filter the packet kinds
-        packetFilter = ''
-        if not self.HTTPCheckBox.isChecked():
-            packetFilter += 'HTTP,'
-        if not self.TLSCheckBox.isChecked():
-            packetFilter += 'TLS,'
-        if not self.DHCPCheckBox.isChecked():
-            packetFilter += 'DHCP,'
-        if not self.DNSCheckBox.isChecked():
-            packetFilter += 'DNS,'
-        if not self.TCPCheckBox.isChecked():
-            packetFilter += 'TCP,'
-        if not self.UDPCheckBox.isChecked():
-            packetFilter += 'UDP,'
-        if not self.ICMPCheckBox.isChecked():
-            packetFilter += 'ICMP,'
-        if not self.ARPCheckBox.isChecked():
-            packetFilter += 'ARP,'
-        if not self.IGMPCheckBox.isChecked():
-            packetFilter += 'IGMP,'
-        if not self.STPCheckBox.isChecked():
-            packetFilter += 'STP,'
-        #dicionary for packet kinds and their methods for handling:
-        captureDictionary = {
-        HTTP: handleHTTP,
-        TLS: handleTLS,
-        DHCP: handleDHCP,
-        DNS: handleDNS,
-        TCP: handleTCP,
-        UDP: handleUDP,
-        ICMP: handleICMP,
-        ARP: handleARP,
-        IGMP: handleIGMP,
-        STP: handleSTP,
-        }
-        if packetFilter != '': #if packetFilter isn't empty it means we need to filter the dictionary 
-            packetFilter.rstrip(',').split(',') #splite the original string to get a list of the packet types
-            temp = captureDictionary.copy() #save the original dictionary in temp var
-            for packetType, handler in temp.items(): #iterating on the dictionary to remove the filtered packets
-                if packetType == TLS: #if true we need to strip a TLS packet string
-                    p = str(packetType).split('.')[4].rstrip("'>") #strip the str representation of the TLS packet for extracting its name
-                else: #else its a regular packet so we strip it 
-                    p = str(packetType).split('.')[3].rstrip("'>") #strip the str representation of the packet for extracting its name
-                if p in packetFilter: #if true we need to delete the packet type from the dictionary
-                    del captureDictionary[packetType] #delete packet from dictionary
-        if not captureDictionary: #if dictionary is empty we raise a new exception to indicate of an error 
-            raise Exception('Error, you must choose at least one type for scan.')
-        return captureDictionary
+        if self.ui.HTTPCheckBox.isChecked():
+            packetFilter.append('HTTP')
+        if self.ui.TLSCheckBox.isChecked():
+            packetFilter.append('TLS')
+        if self.ui.DHCPCheckBox.isChecked():
+            packetFilter.append('DHCP')
+        if self.ui.DNSCheckBox.isChecked():
+            packetFilter.append('DNS')
+        if self.ui.TCPCheckBox.isChecked():
+            packetFilter.append('TCP')
+        if self.ui.UDPCheckBox.isChecked():
+            packetFilter.append('UDP')
+        if self.ui.ICMPCheckBox.isChecked():
+            packetFilter.append('ICMP')
+        if self.ui.ARPCheckBox.isChecked():
+            packetFilter.append('ARP')
+        if self.ui.IGMPCheckBox.isChecked():
+            packetFilter.append('IGMP')
+        if self.ui.STPCheckBox.isChecked():
+            packetFilter.append('STP')
+
+        if not packetFilter: #if list is empty we raise a new exception to indicate of an error 
+            CustomMessageBox.showMessageBox('No Packets Selected', 'Error, you must choose at least one packet type for scan.', 'Information')
+            return None #return None if no packets selected
+        return packetFilter
      
 
-    #method that checks the ip and port line edit lables, if valid it returns the string representing the option, else raises a ValueError exception
+    #method that checks the ip and port line edit lables, if valid it returns the string representing the option
     def getPortIP(self):
-        output = ''
-        if self.IPLineEdit.text() != '': #if true user typed a ip for us to search for 
+        portIPFilter = '' #string for the port and ip filter
+
+        if self.ui.IPLineEdit.text() != '': #if true user typed a ip for us to search for 
             if not self.validIp: #if ip isnt valid we raise a ValueError exeption
-                raise ValueError('Error, please enter a valid IP address in the format {xxx.xxx.xxx.xxx}.')
-            else: #else the ip is valid we add it to output string
-                output += f'(src {self.IPLineEdit.text()} or {self.IPLineEdit.text()})'
-        if self.PortLineEdit.text() != '': #if user typed a port to seach for
-            if output != '': #if true we need to divide the ip and port with 'add' word 
-                output += ' and ' #add the word that divides the ip and port
-            output += f'port {self.PortLineEdit.text()}' #add the port to the output
-        return output
+               CustomMessageBox.showMessageBox('IP Is Not Valid', 'Error, please provide a valid IP address (e.g., 172.16.254.1).', 'Information')
+               return None #return None if ip is invalid
+            else: #else the ip is valid we add it to portIPFilter string
+                portIPFilter += f'(src {self.ui.IPLineEdit.text()} or {self.ui.IPLineEdit.text()})'
+        if self.ui.PortLineEdit.text() != '': #if user typed a port to seach for
+            if portIPFilter != '': #if true we need to divide the ip and port with 'add' word 
+                portIPFilter += ' and ' #add the word that divides the ip and port
+            portIPFilter += f'port {self.ui.PortLineEdit.text()}' #add the port to the portIPFilter
+        return portIPFilter
 
 
-    #method for updating the packet list
-    def updatePacketList(self, maxSize=100):
-        buffer = min(self.packetQueue.qsize(), maxSize) #buffer for the amount of packets to add at a time, min between queue size and maxSize value
-        if self.packetCaptureThread != None and not self.packetQueue.empty(): #we add packets when queue if not empty 
-            while buffer > 0: #add the packets to packet list while buffer isn't empty 
-                packetInfo = self.packetQueue.get() #taking a packet from the queue
-                self.packetModel.appendRow(QStandardItem(packetInfo)) #adding to packet list in GUI
-                buffer -= 1 #subtracting from buffer
+    #method for updating the packet queue with new packets
+    @Slot(Default_Packet)
+    def updatePacketQueue(self, packet):
+        if packet != None: #if the packet isn't None we proceed
+            packet.setId(self.packetCounter) #set the packet id to be the packet counter
+            self.packetDictionary[packet.getId()] = packet #insert it to packet dictionary
+            self.packetQueue.append(packet) #add the packet to the queue
+            self.packetCounter += 1 #increase the packet counter
+
+            #check if we reached the packet threshold and call the method to update the packet list
+            if len(self.packetQueue) >= self.packetThreshold: #if true we reached packet threshold
+                self.packetTimer.stop() #stopping packet timer
+                self.packetTimer.start(self.packetTimerTimout) #resetting packet timer
+                self.updatePacketListView() #call the method to update the packet list in GUI
+
+
+    #method for updating the packet listView
+    def updatePacketListView(self):
+        if self.packetCaptureThread != None and self.packetQueue: #we add packets when packet queue if not empty
+            numberOfPackets = min(len(self.packetQueue), self.packetThreshold) #represents the amount of packets to add at a time
+            packetList = self.packetQueue[:numberOfPackets] #take packets from the queue based on numberOfPackets
+
+            #we add the packets to the listView based on the amount of packets acccording to the threshold
+            for packet in packetList:
+                item = QStandardItem(packet.info()) #creating standard item for the packet
+                self.packetModel.appendRow(item) #adding the item to the listView
+            del self.packetQueue[:numberOfPackets] #deleting the packets we added to the listView from the queue
 
 
     #method the double clicks in packet list, extended information section
     def handleItemDoubleClicked(self, index):
         packetIndex = index.row() #get the index of the row of the specific packet we want
-        item = self.PacketList.model().itemFromIndex(index) #taking the packet from the list in GUI
-        if item is not None and packetIndex in packetDictionary: #checking if the packet in GUI list isn't None 
-            p = packetDictionary[packetIndex] #taking the matching packet from the packetDictionary
-            self.MoreInfoTextEdit.setText(p.moreInfo()) #add the information to the extended information section in GUI
+        item = self.ui.PacketList.model().itemFromIndex(index) #taking the packet from the list in GUI
+        if item != None and packetIndex in self.packetDictionary: #checking if the packet in GUI list isn't None 
+            packet = self.packetDictionary[packetIndex] #taking the matching packet from the packetDictionary
+            self.ui.MoreInfoTextEdit.setText(packet.moreInfo()) #add the information to the extended information section in GUI
     
     
     #method to handle state of checkboxes, if state false we disable them, otherwise we enable them
     def handleGUIState(self, state):
         if state: #if true we set the checkboxes and ip/port line edit to be enabled
-            self.HTTPCheckBox.setEnabled(True)
-            self.TLSCheckBox.setEnabled(True)
-            self.TCPCheckBox.setEnabled(True)
-            self.DNSCheckBox.setEnabled(True)
-            self.UDPCheckBox.setEnabled(True)
-            self.ICMPCheckBox.setEnabled(True)
-            self.DHCPCheckBox.setEnabled(True)
-            self.ARPCheckBox.setEnabled(True)
-            self.IGMPCheckBox.setEnabled(True)
-            self.STPCheckBox.setEnabled(True)
-            self.IPLineEdit.setEnabled(True)
-            self.PortLineEdit.setEnabled(True)
-            self.InterfaceComboBox.setEnabled(True)
+            self.ui.HTTPCheckBox.setEnabled(True)
+            self.ui.TLSCheckBox.setEnabled(True)
+            self.ui.TCPCheckBox.setEnabled(True)
+            self.ui.DNSCheckBox.setEnabled(True)
+            self.ui.UDPCheckBox.setEnabled(True)
+            self.ui.ICMPCheckBox.setEnabled(True)
+            self.ui.DHCPCheckBox.setEnabled(True)
+            self.ui.ARPCheckBox.setEnabled(True)
+            self.ui.IGMPCheckBox.setEnabled(True)
+            self.ui.STPCheckBox.setEnabled(True)
+            self.ui.IPLineEdit.setEnabled(True)
+            self.ui.PortLineEdit.setEnabled(True)
+            self.ui.InterfaceComboBox.setEnabled(True)
         else: #else we disable the checkboxes and ip/port line edit
-            self.HTTPCheckBox.setEnabled(False)
-            self.TLSCheckBox.setEnabled(False)
-            self.TCPCheckBox.setEnabled(False)
-            self.DNSCheckBox.setEnabled(False)
-            self.UDPCheckBox.setEnabled(False)
-            self.ICMPCheckBox.setEnabled(False)
-            self.DHCPCheckBox.setEnabled(False)
-            self.ARPCheckBox.setEnabled(False)
-            self.IGMPCheckBox.setEnabled(False)
-            self.STPCheckBox.setEnabled(False)
-            self.IPLineEdit.setEnabled(False)
-            self.PortLineEdit.setEnabled(False)
-            self.InterfaceComboBox.setEnabled(False)
+            self.ui.HTTPCheckBox.setEnabled(False)
+            self.ui.TLSCheckBox.setEnabled(False)
+            self.ui.TCPCheckBox.setEnabled(False)
+            self.ui.DNSCheckBox.setEnabled(False)
+            self.ui.UDPCheckBox.setEnabled(False)
+            self.ui.ICMPCheckBox.setEnabled(False)
+            self.ui.DHCPCheckBox.setEnabled(False)
+            self.ui.ARPCheckBox.setEnabled(False)
+            self.ui.IGMPCheckBox.setEnabled(False)
+            self.ui.STPCheckBox.setEnabled(False)
+            self.ui.IPLineEdit.setEnabled(False)
+            self.ui.PortLineEdit.setEnabled(False)
+            self.ui.InterfaceComboBox.setEnabled(False)
             
-#------------------------------------------------------Application-END------------------------------------------------------#
+#-----------------------------------------------------SNIFFSERPENT-END------------------------------------------------------#
 
-#--------------------------------------------------------ImageLabel---------------------------------------------------------#
-class ImageLabel(QLabel):
-    clicked = pyqtSignal() #clicked signal 
-    isClickable = None #flag for indicating if label is clickable
-    
-    def __init__(self, x, y, width, height, pixmapPath, isClickable, parent=None):
-        super().__init__(parent) #call default QLabel ctor
-        self.isClickable = isClickable #set the isClickable flag
-        self.setPixmap(QPixmap(pixmapPath)) #set the path for image 
-        self.setStyleSheet('QLabel { background: none; }') #set the backgorund to be transparent
-        self.setGeometry(x, y, width, height) #set the position for label in GUI
-        self.setMouseTracking(True) #set mouse tracking to be enabled
+#---------------------------------------------------PACKETCAPTURETHREAD-----------------------------------------------------#
+#thread class for capturing packets in real time
+class PacketCaptureThread(QThread):
+    updatePacketQueue = Signal(Default_Packet) #signal for updating the packet queue in GUI
+    updatePacketTimer = Signal(bool) #signal for the thread to update packet timer in main thread
+    showMessageBox = Signal(str, str, str) #signal for showing messagebox in GUI
+    captureDictionary = None #represents the dictionary with packet types and their init methods
+    sniffer = None #represents network sniffer
+    stopFlag = False ##represents stop flag for indicating when to stop the sniffer
+    interface = None #interface of network 
+    packetFilter = None #represents the packet type filter for sniffer
+    portAndIP = None #represents port and ip filter for sniffer
+    packetList = None #represents the list of packets to be loaded
 
-    #method for mouse press event
-    def mousePressEvent(self, event):
-        if self.isClickable:
-            self.clicked.emit() #emit the clicked signal 
+    #constructor for the packet capture thread
+    def __init__(self, interface='', packetFilter=[], portAndIP='', packetList=None):
+        super(PacketCaptureThread, self).__init__()
+        #initalize capture dictionary with packet types and their init methods
+        self.captureDictionary = {('HTTP', HTTP): self.initHTTP, ('TLS', TLS): self.initTLS, ('DHCP', DHCP): self.initDHCP, ('DNS', DNS): self. initDNS, ('TCP', TCP): self.initTCP, 
+                                    ('UDP', UDP): self.initUDP, ('ICMP', ICMP): self.initICMP, ('ARP', ARP): self.initARP, ('IGMP', IGMP): self.initIGMP, ('STP', STP): self.initSTP}
+        self.interface = interface #initialize the network interface if given
+        self.packetFilter = packetFilter #set the packet filter for scapy sniff method
+        self.portAndIP = portAndIP #set the port and ip string for filthering with desired pord and ip
+        self.packetList = packetList #set the packet list to be loaded
 
-    #method for mouse enter event
-    def enterEvent(self, event):
-        if self.isClickable:
-            self.setCursor(Qt.PointingHandCursor) #set the cursor to be pointing hand
 
-    #method for mouse leave event
-    def leaveEvent(self, event):
-        if self.isClickable:
-            self.unsetCursor() #set back cursor to be regular
+    #method for stopping the packet capture thread
+    @Slot()
+    def stopThread(self):
+        try:
+            self.stopFlag = True #set stop flag
+            #we check if sniffer is still running, if so we stop it
+            if self.sniffer and self.sniffer.running:
+                self.sniffer.stop() #stop async sniffer
+        except Exception as e:
+            self.showMessageBox.emit('Permission Denied', 'Sniffing unavailable, please run again with administrative privileges.', 'Critical') #emit a signal to GUI to show error message box
+            print('Permission denied. Please run again with administrative privileges.') #print permission error message in terminal
+        finally:
+            self.quit() #exit main loop and end task
+            self.wait(2000) #we wait to ensure thread cleanup
 
-#------------------------------------------------------ImageLabel-END-------------------------------------------------------#
 
-#-----------------------------------------------------CustomMessageBox------------------------------------------------------#
+    #method for checking when to stop sniffing packets
+    def stopScan(self, packet):
+        return self.stopFlag #return the stop flag
+
+
+    #method that handles the packet capturing
+    def packetCapture(self, packet):         
+        # iterate over capture dictionary and find coresponding initPacket method for each packet that is not filtered
+        for packetType, initPacket in self.captureDictionary.items():
+            if packetType[0] in self.packetFilter and packet.haslayer(packetType[1]): #if we found matching packet we call its initPacket method
+                initPacket(packet) #call initPacket method of each packet
+                break #break the loop if we found a matching packet
+
+
+    #run method for the thread, initialize packet scan with necessary parameters or load packets from given packet list
+    def run(self):
+        try:
+            self.updatePacketTimer.emit(True) #start packet timer when thread starts
+            if self.packetList != None: #if true we received a packet list meaning we need to load scan from pcap file
+                for packet in self.packetList: #iterate through the packet list 
+                    self.packetCapture(packet) #call packetCapture method to handle the packets
+                QThread.sleep(2) #we give the thread to sleep for 2 seconds for gui responsiveness
+            else: #else we need to start a packet scan
+                #we call sniff with desired interface and filters for port and ip
+                self.sniffer = AsyncSniffer(iface=self.interface, prn=self.packetCapture, filter=self.portAndIP, stop_filter=self.stopScan, store=False)
+                self.sniffer.start() #start our async sniffing
+                self.exec() #start packet capture thread process
+        except PermissionError: #if user didn't run in administrative privileges we emit signal to show messagebox with error
+            self.showMessageBox.emit('Permission Denied', 'Sniffing unavailable, please run again with administrative privileges.', 'Critical') #emit a signal to GUI to show error message box
+            print('Permission denied. Please run again with administrative privileges.') #print permission error message in terminal
+        except Exception as e: #we catch an exception if something happend while sniffing
+            self.showMessageBox.emit('Error Occured While Sniffing', f'An error occurred: {e}.', 'Critical') #emit a signal to GUI to show error message box
+            print(f'An error occurred: {e}.') #print error message in terminal
+        finally:
+            self.updatePacketTimer.emit(False) #after thread finishes we stop packet timer
+
+
+    #---------------------------------------------------INIT-PACKET-METHODS-----------------------------------------------------#
+    #method that initialize TCP packets
+    def initTCP(self, packet):
+        TCP_Object = TCP_Packet(packet) #create a new object for packet
+        self.updatePacketQueue.emit(TCP_Object) #emit signal to update packet queue in main thread
+
+
+    #method that initialize UDP packets
+    def initUDP(self, packet):
+        UDP_Object = UDP_Packet(packet) #create a new object for packet
+        self.updatePacketQueue.emit(UDP_Object) #emit signal to update packet queue in main thread
+
+
+    #method that initialize HTTP packets
+    def initHTTP(self, packet):
+        HTTP_Object = HTTP_Packet(packet) #create a new object for packet
+        self.updatePacketQueue.emit(HTTP_Object) #emit signal to update packet queue in main thread
+
+
+    #method that initialize DNS packets
+    def initDNS(self, packet):
+        DNS_Object = DNS_Packet(packet) #create a new object for packet
+        self.updatePacketQueue.emit(DNS_Object) #emit signal to update packet queue in main thread
+
+
+    #method that initialize TLS packets
+    def initTLS(self, packet):
+        if packet[TLS].type == 22: #we need to capture handshakes TLS packets so 22 is the correct type
+            TLS_Object = TLS_Packet(packet) #create a new object for packet
+            self.updatePacketQueue.emit(TLS_Object) #emit signal to update packet queue in main thread
+
+
+    #method that initialize ICMP packets
+    def initICMP(self, packet):
+        ICMP_Object = ICMP_Packet(packet) #create a new object for packet
+        self.updatePacketQueue.emit(ICMP_Object) #emit signal to update packet queue in main thread
+
+
+    #method that initialize DHCP packets
+    def initDHCP(self, packet):
+        if packet[DHCP].options[0][1] in [1, 2, 3, 5, 7, 8]: #we check if its a valid parameter for DHCP
+            DHCP_Object = DHCP_Packet(packet) #create a new object for packet
+            self.updatePacketQueue.emit(DHCP_Object) #emit signal to update packet queue in main thread
+
+
+    #method that initialize ARP packets
+    def initARP(self, packet):
+        ARP_Object = ARP_Packet(packet) #create a new object for packet
+        self.updatePacketQueue.emit(ARP_Object) #emit signal to update packet queue in main thread
+
+
+    #method that initialize IGMP packets
+    def initIGMP(self, packet):
+        if packet[IGMP].type in [17, 18, 22, 23]: #we check if its a valid parameter for IGMP
+            IGMP_Object = IGMP_Packet(packet) #create a new object for packet
+            self.updatePacketQueue.emit(IGMP_Object) #emit signal to update packet queue in main thread
+
+
+    #method that initialize STP packets
+    def initSTP(self, packet):
+        STP_Object = STP_Packet(packet) #create a new object for packet
+        self.updatePacketQueue.emit(STP_Object) #emit signal to update packet queue in main thread
+
+    #--------------------------------------------------INIT-PACKET-METHODS-END--------------------------------------------------#
+
+#--------------------------------------------------PACKETCAPTURETHREAD-END--------------------------------------------------#
+
+#-----------------------------------------------------CUSTOMMESSAGEBOX------------------------------------------------------#
 class CustomMessageBox(QDialog):
-    def __init__(self, title, text, icon='NoIcon', wordWrap=True, width=400, height=150, parent=None):
+    isMessageBox = False #represents flag for indicating if messagebox already exists
+
+    #constructor of custom message box class
+    def __init__(self, title, message, iconType, width, height, wordWrap, parent=None):
         super().__init__(parent)
         self.setWindowTitle(title) #set the title for message box
-        self.setWindowFlags(Qt.Dialog | Qt.WindowTitleHint | Qt.CustomizeWindowHint | Qt.WindowCloseButtonHint) #set the window flags
-        self.wordWrap = wordWrap #set the wordWrap for text
-        self.setFixedSize(QSize(width, height)) #set the width and height for window
-        self.setStyleSheet('background-color: rgb(245,245,245);') #set backgorund color
-        self.initMessageBox(text, icon) #call initMessageBox for initializing the message box
-        self.exec_() #execute the message box (show)
+        self.setObjectName('customMessageBox') #set object name for message box
+        self.setWindowIcon(QIcon('images/serpent.ico')) #set the icon for message box
 
-    def initMessageBox(self, text, icon):
-        layout = QVBoxLayout() #create new layout
-        horizontalLayout = QHBoxLayout() #create new horizontal layout
-        textLabel = QLabel(text) #creat a text lable 
-        textLabel.setAlignment(Qt.AlignCenter)  #set text alignment to center
-        textLabel.setStyleSheet('font-size: 18px;') #set font size of text
-        textLabel.setWordWrap(self.wordWrap) #set a wordWrap for better text representation
-        textLabel.setOpenExternalLinks(True)  #open links in an external web browser
-            
-        if icon != 'NoIcon': #if true it means we need to set an icon for message box
+        #create the main vertical layout
+        layout = QVBoxLayout(self)
+
+        #create a horizontal layout for the icon and message
+        horizontalLayout = QHBoxLayout()
+
+        #we add an icon only if iconType is not "NoIcon"
+        if iconType != 'NoIcon': #if true it means we need to set an icon for message box
             iconLabel = QLabel()
-            if icon == 'Information':
-                iconLabel.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxInformation).pixmap(QSize(64, 64)))
-                self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxInformation))
-            elif icon == 'Warning':
-                iconLabel.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning).pixmap(QSize(64, 64)))
-                self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxWarning))
-            elif icon == 'Critical':
-                iconLabel.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxCritical).pixmap(QSize(64, 64)))
-                self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxCritical))
-            elif icon == 'Question':
-                iconLabel.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion).pixmap(QSize(64, 64)))
-                self.setWindowIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
-            iconLabel.setAlignment(Qt.AlignLeft) #set the icon to the left
-            spacer = QSpacerItem(10, 10, QSizePolicy.Fixed, QSizePolicy.Fixed) #create new spacer for the message box
-            horizontalLayout.addWidget(iconLabel) #add the icon to layout
-            horizontalLayout.addItem(spacer) #add the spacer to layout
-            horizontalLayout.addWidget(textLabel) #add the text label to layout
-        else: #else no need for an icon 
-            self.setWindowIcon(QIcon('images/serpent.ico')) #add default window icon
-            horizontalLayout.addWidget(textLabel) #add only the text label to layout
+            icon = self.getMessageBoxIcon(iconType) #use the method to get message box icon
+            
+            #create pixmap for icon and set size and margin
+            pixmap = icon.pixmap(48, 48)
+            iconLabel.setPixmap(pixmap)
+            iconLabel.setContentsMargins(15, 0, 15, 0)
+            iconLabel.setAlignment(Qt.AlignCenter) #center the icon vertically
+            horizontalLayout.addWidget(iconLabel) #add icon to horizontal layout
 
-        horizontalLayout.setAlignment(Qt.AlignCenter) #set alignment of horizontal layout
-        layout.addLayout(horizontalLayout) #add the horizontal layout to the vertical layout
-        OKButton = QPushButton('OK') #create new OK button
-        layout.addWidget(OKButton, alignment=Qt.AlignCenter) #add the button to the layout
-        style = '''
-            QPushButton {
-                background-color: rgba(32,33,35,255);
-                color: rgb(245,245,245);
+        #set the message
+        messageLabel = QLabel(message)
+        messageLabel.setWordWrap(wordWrap) #ensure long messages wrap properly
+        messageLabel.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter) #vertically center the text
+        messageLabel.setOpenExternalLinks(True) #open links in an external web browser
+        messageLabel.setContentsMargins(0, 0, 0, 0)
+        messageLabel.setMinimumWidth(250)
+
+        #add message to the horizontal layout
+        horizontalLayout.addWidget(messageLabel)
+        horizontalLayout.setAlignment(Qt.AlignCenter) #center the entire horizontalLayout
+
+        #add stretchable space around the horizontalLayout to center it vertically in the dialog
+        layout.addStretch(1) #add stretch before the content
+        layout.addLayout(horizontalLayout)
+        layout.addStretch(1) #add stretch after the content
+
+        #create buttons layout
+        buttonLayout = QHBoxLayout()
+        buttonLayout.setAlignment(Qt.AlignCenter) #center the buttons
+
+        #if question message box, we show "Yes" and "No" buttons
+        if iconType == 'Question':
+            yesButton = QPushButton('Yes')
+            yesButton.setCursor(QCursor(Qt.PointingHandCursor))
+            yesButton.clicked.connect(self.accept)
+            noButton = QPushButton('No')
+            noButton.setCursor(QCursor(Qt.PointingHandCursor))
+            noButton.clicked.connect(self.reject)
+            buttonLayout.addWidget(yesButton)
+            buttonLayout.addSpacing(15)
+            buttonLayout.addWidget(noButton)
+        #else we show "OK" button
+        else:
+            okButton = QPushButton('OK')
+            okButton.setCursor(QCursor(Qt.PointingHandCursor))
+            okButton.clicked.connect(self.accept)
+            buttonLayout.addWidget(okButton)
+
+        #apply layout to the dialog
+        layout.addLayout(buttonLayout)
+        self.setLayout(layout)
+
+        #set custom stylesheet
+        self.setStyleSheet('''
+            #customMessageBox {
+                background-color: rgb(245, 245, 245);
+            }
+                
+            #customMessageBox QLabel {
+                color: black;
+                font-family: Arial;
+                font-size: 18px;
+            }
+            
+            #customMessageBox QPushButton {
+                background-color: rgba(32, 33, 35, 255);
+                color: rgb(245, 245, 245);
                 border: 2px solid black;
                 border-radius: 15px;
                 padding: 4px;
-                font-size: 17px; 
-                font-family: Arial; 
-                min-width: 60px;  
+                font-family: Arial;
+                font-size: 17px;
+                font-weight: bold;
+                min-width: 60px;
                 min-height: 20px;
             }
-            QPushButton:hover {
+                    
+            #customMessageBox QPushButton:hover {
                 background-color: rgb(87, 89, 101);
             }
-            QPushButton:pressed {
+                  
+            #customMessageBox QPushButton:pressed {
                 background-color: rgb(177, 185, 187);
             }
-        '''
-        OKButton.setStyleSheet(style) #set stylesheet for the OK button
-        OKButton.clicked.connect(self.accept) #set an accept operation to the clicks of OK button
-        self.setLayout(layout) #finally set the layout of the messsage box
+        ''')
 
-#---------------------------------------------------CustomMessageBox-END----------------------------------------------------#
+        #set dialog properties
+        self.setMinimumSize(width, height) #set a reasonable minimum size
+        self.adjustSize() #adjust the size based on content
+        self.setFixedSize(self.size()) #lock the size to prevent resizing
+
+
+    #method for overriting the original accept function and setting isMessageBox flag
+    def accept(self):
+        CustomMessageBox.isMessageBox = False
+        super().accept()
+
+
+    #method for overriting the original reject function and setting isMessageBox flag
+    def reject(self):
+        CustomMessageBox.isMessageBox = False
+        super().reject()
+    
+
+    #method for mapping the iconType to the appropriate StandardPixmap icon
+    def getMessageBoxIcon(self, iconType):
+        if iconType == 'Warning':
+            return QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
+        elif iconType == 'Critical':
+            return QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxCritical)
+        elif iconType == 'Question':
+            return QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxQuestion)
+        return QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
+
+
+    #function for showing message box window
+    def showMessageBox(title, message, iconType='Information', width=400, height=150, wordWrap=True):
+        #iconType options can be Information, Warning, Critical, Question, NoIcon
+        if not CustomMessageBox.isMessageBox:
+            messageBox = CustomMessageBox(title, message, iconType, width, height, wordWrap)
+
+            #set isMessageBox and show message box
+            CustomMessageBox.isMessageBox = True
+            result = messageBox.exec()
+
+            #return result value for question message box, else true
+            return result == QDialog.Accepted if iconType == 'Question' else True
+        return False #if there's already a message box showing we return false
+
+#---------------------------------------------------CUSTOMMESSAGEBOX-END----------------------------------------------------#
 
 #-----------------------------------------------------------MAIN------------------------------------------------------------#
 
 if __name__ == '__main__':
-    #----------------APP----------------#
+    #check if listening server is running
+    if SniffSerpent.checkServer():
+        print('Another instance is already running.')
+        sys.exit(0)
+
+    #initalize listening server for application
+    if not SniffSerpent.initServer():
+        print('Failed to initialize listening server.')
+        sys.exit(1)
+
+    #start SniffSerpent application
     app = QApplication(sys.argv)
-    sniffer = PacketSniffer()
-    try:
-        sys.exit(app.exec_())
-    except:
-        print('Exiting')
-    #----------------APP----------------#
-    #getAvailableInterfaces()
+    sniffSerpent = SniffSerpent()
+    sniffSerpent.show()
+
+    #execute application and return execution code
+    ret = app.exec()
+    print('Exiting.')
+    sys.exit(ret)
 
 #-----------------------------------------------------------MAIN-END---------------------------------------------------------#
