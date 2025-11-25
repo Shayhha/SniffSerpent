@@ -2,7 +2,7 @@
 
 ## Overview
 
-SniffSerpent is a powerful network packet analysis tool built with a user-friendly GUI using PyQt and advanced packet capturing techniques using Scapy. It enables you to capture, examine, and analyze different types of network packets. The application currently supports seven packet types: TCP, UDP, HTTP, DNS, TLS, ICMP, DHCP, ARP, IGMP and STP. It also provides insightful details about packets containing IP layers and other packet specific parameters that you can analyze further.
+SniffSerpent is a powerful network packet analysis tool built with a user-friendly GUI using PySide (Qt) and advanced packet capturing techniques using Scapy. It enables you to capture, examine, and analyze different types of network packets. The application currently supports seven packet types: TCP, UDP, HTTP, DNS, TLS, ICMP, DHCP, ARP, IGMP and STP. It also provides insightful details about packets containing IP layers and other packet specific parameters that you can analyze further.
 
 ## Clone Repository:
 
@@ -16,7 +16,7 @@ git clone https://github.com/Shayhha/SniffSerpent
 - Supports packet types: TCP, UDP, HTTP, DNS, TLS, ICMP, DHCP, ARP, IGMP, STP.
 - Enables user to search packets by type, port and IP address.
 - Provides detailed packet information including IP layers.
-- Utilizes a clean and intuitive GUI developed with PyQt5.
+- Utilizes a clean and intuitive GUI developed with PySide.
 - Enables users to save scan results as a TXT file or PCAP file for further analysis.
 - Enables users to load saved PCAP scan file and analyse scan results.
 - Leverages Scapy, a Python library for network packet manipulation.
@@ -64,13 +64,13 @@ git clone https://github.com/Shayhha/SniffSerpent
 
 Ensure you have the following dependencies installed on your system:
 
-- PyQt5
+- PySide6
 - Scapy
 
 You can easily install these dependencies using the following commands:
 
 ```bash
-pip install pyqt5
+pip install pyside6
 pip install scapy
 ```
 
