@@ -35,7 +35,7 @@
 }
 
 QScrollBar:vertical, QScrollBar:horizontal {
-    background-color: rgba(247, 247, 247, 150);
+    background-color: rgb(250, 250, 250);
     border: 1px solid rgb(153, 153, 153);
     width: 10px;
     height: 10px; 
@@ -78,8 +78,7 @@ QToolTip {
    color: rgb(245,245,245);
    background-color: rgba(46, 47, 56, 0.8);
    border: 1px solid rgb(102,102,102);
-}
-</string>
+}</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QListView" name="PacketList">
@@ -113,7 +112,7 @@ QToolTip {
      <cursorShape>ArrowCursor</cursorShape>
     </property>
     <property name="focusPolicy">
-     <enum>Qt::NoFocus</enum>
+     <enum>Qt::FocusPolicy::NoFocus</enum>
     </property>
     <property name="styleSheet">
      <string notr="true">QListView {
@@ -129,19 +128,19 @@ QToolTip {
 </string>
     </property>
     <property name="verticalScrollBarPolicy">
-     <enum>Qt::ScrollBarAlwaysOn</enum>
+     <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOn</enum>
     </property>
     <property name="horizontalScrollBarPolicy">
-     <enum>Qt::ScrollBarAsNeeded</enum>
+     <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
     </property>
     <property name="sizeAdjustPolicy">
-     <enum>QAbstractScrollArea::AdjustIgnored</enum>
+     <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustIgnored</enum>
     </property>
     <property name="autoScroll">
      <bool>true</bool>
     </property>
     <property name="editTriggers">
-     <set>QAbstractItemView::NoEditTriggers</set>
+     <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
     </property>
    </widget>
    <widget class="QFrame" name="OptionsFrame">
@@ -179,10 +178,10 @@ QToolTip {
 </string>
     </property>
     <property name="frameShape">
-     <enum>QFrame::StyledPanel</enum>
+     <enum>QFrame::Shape::StyledPanel</enum>
     </property>
     <property name="frameShadow">
-     <enum>QFrame::Raised</enum>
+     <enum>QFrame::Shadow::Raised</enum>
     </property>
     <widget class="QLabel" name="FiltherLabel">
      <property name="geometry">
@@ -226,14 +225,14 @@ QToolTip {
       <rect>
        <x>206</x>
        <y>110</y>
-       <width>60</width>
+       <width>65</width>
        <height>39</height>
       </rect>
      </property>
      <property name="maximumSize">
       <size>
-       <width>60</width>
-       <height>60</height>
+       <width>65</width>
+       <height>39</height>
       </size>
      </property>
      <property name="font">
@@ -246,11 +245,34 @@ QToolTip {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="styleSheet">
       <string notr="true">QCheckBox {
    background-color: none;
+}
+
+QCheckBox::indicator {
+    background-color: none;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(0, 116, 217);
+    border: 2px solid rgb(0, 90, 180);
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: white;
+    border: 2px solid lightgray;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgb(0, 116, 217);
+}
+
+QCheckBox::indicator:pressed {
+    background-color: rgb(0, 80, 150);
+    border: 2px solid rgb(0, 60, 120);
 }</string>
      </property>
      <property name="text">
@@ -265,14 +287,14 @@ QToolTip {
       <rect>
        <x>530</x>
        <y>110</y>
-       <width>73</width>
+       <width>75</width>
        <height>39</height>
       </rect>
      </property>
      <property name="maximumSize">
       <size>
-       <width>73</width>
-       <height>60</height>
+       <width>75</width>
+       <height>39</height>
       </size>
      </property>
      <property name="font">
@@ -285,11 +307,34 @@ QToolTip {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="styleSheet">
       <string notr="true">QCheckBox {
    background-color: none;
+}
+
+QCheckBox::indicator {
+    background-color: none;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(0, 116, 217);
+    border: 2px solid rgb(0, 90, 180);
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: white;
+    border: 2px solid lightgray;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgb(0, 116, 217);
+}
+
+QCheckBox::indicator:pressed {
+    background-color: rgb(0, 80, 150);
+    border: 2px solid rgb(0, 60, 120);
 }</string>
      </property>
      <property name="text">
@@ -304,14 +349,14 @@ QToolTip {
       <rect>
        <x>708</x>
        <y>110</y>
-       <width>60</width>
+       <width>65</width>
        <height>39</height>
       </rect>
      </property>
      <property name="maximumSize">
       <size>
-       <width>60</width>
-       <height>50</height>
+       <width>65</width>
+       <height>39</height>
       </size>
      </property>
      <property name="font">
@@ -324,11 +369,34 @@ QToolTip {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="styleSheet">
       <string notr="true">QCheckBox {
    background-color: none;
+}
+
+QCheckBox::indicator {
+    background-color: none;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(0, 116, 217);
+    border: 2px solid rgb(0, 90, 180);
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: white;
+    border: 2px solid lightgray;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgb(0, 116, 217);
+}
+
+QCheckBox::indicator:pressed {
+    background-color: rgb(0, 80, 150);
+    border: 2px solid rgb(0, 60, 120);
 }</string>
      </property>
      <property name="text">
@@ -343,14 +411,14 @@ QToolTip {
       <rect>
        <x>875</x>
        <y>110</y>
-       <width>60</width>
+       <width>65</width>
        <height>39</height>
       </rect>
      </property>
      <property name="maximumSize">
       <size>
-       <width>60</width>
-       <height>50</height>
+       <width>65</width>
+       <height>39</height>
       </size>
      </property>
      <property name="font">
@@ -363,11 +431,34 @@ QToolTip {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="styleSheet">
       <string notr="true">QCheckBox {
    background-color: none;
+}
+
+QCheckBox::indicator {
+    background-color: none;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(0, 116, 217);
+    border: 2px solid rgb(0, 90, 180);
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: white;
+    border: 2px solid lightgray;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgb(0, 116, 217);
+}
+
+QCheckBox::indicator:pressed {
+    background-color: rgb(0, 80, 150);
+    border: 2px solid rgb(0, 60, 120);
 }</string>
      </property>
      <property name="text">
@@ -382,14 +473,14 @@ QToolTip {
       <rect>
        <x>371</x>
        <y>110</y>
-       <width>61</width>
+       <width>65</width>
        <height>39</height>
       </rect>
      </property>
      <property name="maximumSize">
       <size>
-       <width>85</width>
-       <height>50</height>
+       <width>65</width>
+       <height>39</height>
       </size>
      </property>
      <property name="font">
@@ -402,11 +493,34 @@ QToolTip {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="styleSheet">
       <string notr="true">QCheckBox {
    background-color: none;
+}
+
+QCheckBox::indicator {
+    background-color: none;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(0, 116, 217);
+    border: 2px solid rgb(0, 90, 180);
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: white;
+    border: 2px solid lightgray;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgb(0, 116, 217);
+}
+
+QCheckBox::indicator:pressed {
+    background-color: rgb(0, 80, 150);
+    border: 2px solid rgb(0, 60, 120);
 }</string>
      </property>
      <property name="text">
@@ -424,14 +538,14 @@ QToolTip {
       <rect>
        <x>126</x>
        <y>110</y>
-       <width>60</width>
+       <width>65</width>
        <height>39</height>
       </rect>
      </property>
      <property name="maximumSize">
       <size>
-       <width>60</width>
-       <height>60</height>
+       <width>65</width>
+       <height>39</height>
       </size>
      </property>
      <property name="font">
@@ -444,11 +558,34 @@ QToolTip {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="styleSheet">
       <string notr="true">QCheckBox {
    background-color: none;
+}
+
+QCheckBox::indicator {
+    background-color: none;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(0, 116, 217);
+    border: 2px solid rgb(0, 90, 180);
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: white;
+    border: 2px solid lightgray;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgb(0, 116, 217);
+}
+
+QCheckBox::indicator:pressed {
+    background-color: rgb(0, 80, 150);
+    border: 2px solid rgb(0, 60, 120);
 }</string>
      </property>
      <property name="text">
@@ -492,7 +629,7 @@ QToolTip {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="toolTip">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Start packet scan and analysis.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -562,7 +699,7 @@ QPushButton:disabled {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="toolTip">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Stop packet scan and analysis.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -632,7 +769,7 @@ QPushButton:disabled {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="toolTip">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Save scan in text file or PCAP file.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -702,7 +839,7 @@ QPushButton:disabled {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="toolTip">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Clear screen contents.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -766,15 +903,14 @@ QPushButton:disabled {
       <font>
        <family>Arial</family>
        <pointsize>12</pointsize>
-       <weight>75</weight>
        <bold>true</bold>
       </font>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400;&quot;&gt;IP in format {xxx.xxx.xxx.xxx}.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400;&quot;&gt;Enter valid IP address (e.g., 172.16.254.1).&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">QLineEdit {
@@ -797,7 +933,7 @@ QPushButton:disabled {
       <number>27</number>
      </property>
      <property name="echoMode">
-      <enum>QLineEdit::Normal</enum>
+      <enum>QLineEdit::EchoMode::Normal</enum>
      </property>
      <property name="placeholderText">
       <string>         Optional</string>
@@ -871,15 +1007,14 @@ QPushButton:disabled {
       <font>
        <family>Arial</family>
        <pointsize>12</pointsize>
-       <weight>75</weight>
        <bold>true</bold>
       </font>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400;&quot;&gt;Port from 0 to 65535.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400;&quot;&gt;Enter valid port from 0 to 65535.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">QLineEdit {
@@ -944,14 +1079,14 @@ QPushButton:disabled {
       <rect>
        <x>286</x>
        <y>110</y>
-       <width>71</width>
+       <width>75</width>
        <height>39</height>
       </rect>
      </property>
      <property name="maximumSize">
       <size>
-       <width>80</width>
-       <height>60</height>
+       <width>75</width>
+       <height>39</height>
       </size>
      </property>
      <property name="font">
@@ -964,11 +1099,34 @@ QPushButton:disabled {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="styleSheet">
       <string notr="true">QCheckBox {
    background-color: none;
+}
+
+QCheckBox::indicator {
+    background-color: none;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(0, 116, 217);
+    border: 2px solid rgb(0, 90, 180);
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: white;
+    border: 2px solid lightgray;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgb(0, 116, 217);
+}
+
+QCheckBox::indicator:pressed {
+    background-color: rgb(0, 80, 150);
+    border: 2px solid rgb(0, 60, 120);
 }</string>
      </property>
      <property name="text">
@@ -983,14 +1141,14 @@ QPushButton:disabled {
       <rect>
        <x>451</x>
        <y>110</y>
-       <width>61</width>
+       <width>65</width>
        <height>39</height>
       </rect>
      </property>
      <property name="maximumSize">
       <size>
-       <width>85</width>
-       <height>50</height>
+       <width>65</width>
+       <height>39</height>
       </size>
      </property>
      <property name="font">
@@ -1003,11 +1161,34 @@ QPushButton:disabled {
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="styleSheet">
       <string notr="true">QCheckBox {
    background-color: none;
+}
+
+QCheckBox::indicator {
+    background-color: none;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(0, 116, 217);
+    border: 2px solid rgb(0, 90, 180);
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: white;
+    border: 2px solid lightgray;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgb(0, 116, 217);
+}
+
+QCheckBox::indicator:pressed {
+    background-color: rgb(0, 80, 150);
+    border: 2px solid rgb(0, 60, 120);
 }</string>
      </property>
      <property name="text">
@@ -1054,10 +1235,10 @@ QPushButton:disabled {
 }</string>
      </property>
      <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+      <enum>QFrame::Shape::StyledPanel</enum>
      </property>
      <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
+      <enum>QFrame::Shadow::Raised</enum>
      </property>
      <widget class="QComboBox" name="InterfaceComboBox">
       <property name="geometry">
@@ -1090,7 +1271,6 @@ QPushButton:disabled {
        <font>
         <family>Arial</family>
         <pointsize>12</pointsize>
-        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -1181,7 +1361,7 @@ QComboBox QListView{
      <property name="maximumSize">
       <size>
        <width>75</width>
-       <height>60</height>
+       <height>39</height>
       </size>
      </property>
      <property name="font">
@@ -1194,11 +1374,34 @@ QComboBox QListView{
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="styleSheet">
       <string notr="true">QCheckBox {
    background-color: none;
+}
+
+QCheckBox::indicator {
+    background-color: none;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(0, 116, 217);
+    border: 2px solid rgb(0, 90, 180);
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: white;
+    border: 2px solid lightgray;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgb(0, 116, 217);
+}
+
+QCheckBox::indicator:pressed {
+    background-color: rgb(0, 80, 150);
+    border: 2px solid rgb(0, 60, 120);
 }</string>
      </property>
      <property name="text">
@@ -1220,7 +1423,7 @@ QComboBox QListView{
      <property name="maximumSize">
       <size>
        <width>77</width>
-       <height>60</height>
+       <height>39</height>
       </size>
      </property>
      <property name="font">
@@ -1233,11 +1436,34 @@ QComboBox QListView{
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="styleSheet">
       <string notr="true">QCheckBox {
    background-color: none;
+}
+
+QCheckBox::indicator {
+    background-color: none;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(0, 116, 217);
+    border: 2px solid rgb(0, 90, 180);
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: white;
+    border: 2px solid lightgray;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid rgb(0, 116, 217);
+}
+
+QCheckBox::indicator:pressed {
+    background-color: rgb(0, 80, 150);
+    border: 2px solid rgb(0, 60, 120);
 }</string>
      </property>
      <property name="text">
@@ -1278,7 +1504,7 @@ QComboBox QListView{
       <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="focusPolicy">
-      <enum>Qt::ClickFocus</enum>
+      <enum>Qt::FocusPolicy::ClickFocus</enum>
      </property>
      <property name="toolTip">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Load PCAP file for packet analysis.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1352,7 +1578,7 @@ QPushButton:disabled {
      <bool>false</bool>
     </property>
     <property name="focusPolicy">
-     <enum>Qt::NoFocus</enum>
+     <enum>Qt::FocusPolicy::NoFocus</enum>
     </property>
     <property name="acceptDrops">
      <bool>false</bool>
@@ -1370,7 +1596,7 @@ QPushButton:disabled {
 }</string>
     </property>
     <property name="horizontalScrollBarPolicy">
-     <enum>Qt::ScrollBarAlwaysOff</enum>
+     <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
     </property>
     <property name="readOnly">
      <bool>true</bool>
@@ -1403,10 +1629,10 @@ QPushButton:disabled {
 }</string>
     </property>
     <property name="frameShape">
-     <enum>QFrame::StyledPanel</enum>
+     <enum>QFrame::Shape::StyledPanel</enum>
     </property>
     <property name="frameShadow">
-     <enum>QFrame::Raised</enum>
+     <enum>QFrame::Shadow::Raised</enum>
     </property>
     <widget class="QLabel" name="ScanResultsLabel">
      <property name="geometry">
@@ -1433,7 +1659,6 @@ QPushButton:disabled {
       <font>
        <family>Arial</family>
        <pointsize>22</pointsize>
-       <weight>50</weight>
        <bold>false</bold>
       </font>
      </property>
@@ -1518,6 +1743,50 @@ QPushButton:disabled {
      </property>
      <property name="pixmap">
       <pixmap>images/serpentTitle.png</pixmap>
+     </property>
+    </widget>
+    <widget class="QLabel" name="infoLabel">
+     <property name="geometry">
+      <rect>
+       <x>1548</x>
+       <y>10</y>
+       <width>40</width>
+       <height>40</height>
+      </rect>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>40</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>40</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <family>Arial</family>
+      </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;General information about SniffSerpent.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+   background-color: none;
+}</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="pixmap">
+      <pixmap>images/infoTitle.png</pixmap>
      </property>
     </widget>
    </widget>
